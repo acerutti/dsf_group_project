@@ -6,7 +6,7 @@
 library(tidyverse)
 
 # Clean the environment
-rm(list = ls())
+# rm(list = ls())
 
 # read and load csv
 setwd("~/Desktop/dsf_group_project")
