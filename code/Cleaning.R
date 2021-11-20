@@ -129,7 +129,22 @@ keep_for_now <- c("GDENAMK", "GDENR", "KTKZ", "address", "area", "balcony",
 
 lapply(D, function(x) table(is.na(x)))
 
+D_selection <- replace(D_selection,"TRUE",1)
+#taking all variables with 1 or TRUE, converting it into 1s and 0s
+temp <- apply(D_selection, 2, unique)
 
+
+bin <- c("balcony", "furnished")
+
+D_selection[,bin] = apply(D_selection[,bin], 2, function(x) replace_na(x,0))
+
+
+
+D_clean <- D_selection %>%
+  select(-c(year_built,descr)) %>%
+  na.omit(D_selection)
+
+apply(D_selection, 2, function(x) sum(is.na(x)))
 
 
 
