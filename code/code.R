@@ -67,6 +67,6 @@ perc_na_col_basement = (sum(is.na(data$basement))/100000)*100
 perc_na_col_bath = (sum(is.na(data$bath))/100000)*100
 # I do not select bath because 99 percentage of the entries do not contain any value
 
+## Jason added this for testing purposes
 
-
-
+print("hello")
