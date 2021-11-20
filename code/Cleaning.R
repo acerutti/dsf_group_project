@@ -52,7 +52,10 @@ D_selection <- D[,keep_for_now]
 # dist_to_main_stat?
 #
 
-lapply(D, function(x) table(is.na(x)))
+
+
+
+
 
 D_selection <- replace(D_selection,"TRUE",1)
 #taking all variables with 1 or TRUE, converting it into 1s and 0s
