@@ -70,3 +70,10 @@ perc_na_col_bath = (sum(is.na(data$bath))/100000)*100
 
 
 
+
+
+
+
+# Ale for testing 
+print("ciao")
+
