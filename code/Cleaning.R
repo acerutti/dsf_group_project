@@ -1,7 +1,7 @@
 ################################################################################
 #
 # Script 1: Preliminary Data Cleaning
-#
+# 20.11.2021
 #
 ################################################################################
 # Clean the environment
@@ -64,6 +64,9 @@ save(D, problems, file = "data/rent_listings_raw.RData")
 
 ## Variable Selection ----------------------------------------------------------
 
+##
+load("data/rent_listings_raw.RData")
+
 # We first check which variables do not contain any data. I filtered out any 
 # variables which had roughly more than 50% NAs
 
@@ -71,39 +74,18 @@ save(D, problems, file = "data/rent_listings_raw.RData")
 lapply(D, function(x) table(is.na(x)))
 
 # preliminary selection of important variables
-unimportant <- c("Url", "appartments", "area_useable", "basement", "bath", 
-                 "bath_tube", "bright", "building_plot", "ceiling", "cheminee",
-                 "contact_name", "contact_tel", "cornerhome", "date_available",
-                 "date_inactive", "dishwasher", "dryer", "exit_ramp", "first_time",
-                 "furnished", "garden_m2", "gardenshed", "heating_air",
-                 "heating_earth", "heating_electro", "heating_far", "heating_gas",
-                 "heating_oil", "heating_pellets", "index", "kids_friendly", 
-                 "laundry", "level_0", "manlift", "middle_house", "minergie",
-                 "new_building", "number", "oldbuilding", "oven", "parking_indoor",
-                 "parking_outside", "pets", "playground", "pool", "price", "price_m2",
-                 "public_transport", "quarter_general", "quiet", "raised_groundfloor",
-                 "rent_annual", "rent_annual_m2", "rent_day", "sale", "shared_flat",
-                 "shopping", "shower", "size_land", "source", "sunny", "terrace",
-                 "toilets", "topstorage", "veranda", "water", "wheelchair", "year",
-                 "ind", "ind_add", "PLZZ", "PLZ4", "wgh_avg_sonnenklasse_per_egid...115",
-                 "dist_to_lake", "geb_wohnnutz_total", "max_guar_down_speed", 
-                 "cabletv", "distance_highway", "distance_kindergarden",
-                 "distance_primary", "distance_secondary", "elevator" )
-
-keep_for_now <- c("GDENAMK", "GDENR", "KTKZ", "address", "area", "balcony",
-                  "date", "descr", "floors", "home_type", "lat", "lon", "month",
-                  "msregion", "municipality", "quarter_specific", "rent_brutto",
-                  "rent_full", "rent_nk", "rooms", "scraping_date", "street",
-                  "year_built", "zipcode", "GKODE", "GKODN", "PLZNAME",
-                  "STRNAME", "Micro_rating_new", "Micro_rating_NoiseAndEmission_new",
+keep_for_now <- c("rent_full", "GDENAMK", "KTKZ", "zipcode", "GKODE", "GKODN", "PLZNAME",
+                  "descr", "floors", "furnished", "home_type", "lat", "lon", "date","month", "quarter_general", # furnished kept for tokenization
+                  "msregion", "rooms", "area", "year_built", "newly_built", "balcony", # check if newly_built is year_built == 2019
+                  "Micro_rating_new", "Micro_rating_NoiseAndEmission_new", "Micro_rating_Accessibility_new",
                   "Micro_rating_DistrictAndArea_new", "Micro_rating_SunAndView_new",
-                  "Micro_rating_ServicesAndNature_new", "Anteil_auslaend", "Avg_age",
-                  "Avg_size_household", "Noise_max", "anteil_efh", "apoth_pix_count_km2",
-                  "avg_anzhl_geschosse", "avg_bauperiode", "dist_to_4G", "dist_to_5G",
+                  "Micro_rating_ServicesAndNature_new",
                   "dist_to_haltst", "dist_to_highway", "dist_to_school_1",
-                  "dist_to_train_stat", "restaur_pix_count_km2", "super_pix_count_km2",
-                  "wgh_avg_sonnenklasse_per_egid...136", "rent_m2_pix_avg_km2",
-                  "rent_m2_pix_avg", "dist_to_river")
+                  "dist_to_train_stat", "apoth_pix_count_km2", "restaur_pix_count_km2", "superm_pix_count_km2")
+
+
+D_selection <- D[,keep_for_now]
+
 
 
 ###############
