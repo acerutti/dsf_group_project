@@ -6,7 +6,7 @@
 ################################################################################
 
 ## Variable Selection ----------------------------------------------------------
-
+library(tidyverse)
 
 load("data/rent_listings_raw.RData")
 
@@ -17,9 +17,9 @@ load("data/rent_listings_raw.RData")
 lapply(D, function(x) table(is.na(x)))
 
 # preliminary selection of important variables
-keep_for_now <- c("rent_full", "GDENAMK", "KTKZ", "zipcode", "GKODE", "GKODN", "PLZNAME",
-                  "descr", "floors", "furnished", "home_type", "lat", "lon", "date","month", "quarter_general", # furnished kept for tokenization
-                  "msregion", "rooms", "area", "year_built", "newly_built", "balcony", # check if newly_built is year_built == 2019
+keep_for_now <- c("rent_full", "area", "home_type", "GDENAMK", "KTKZ", "zipcode", "GKODE", "GKODN", "PLZNAME",
+                  "descr", "floors", "furnished", "lat", "lon", "date","month", "quarter_general", # furnished kept for tokenization
+                  "msregion", "rooms",  "year_built", "newly_built", "balcony", # check if newly_built is year_built == 2019
                   "Micro_rating_new", "Micro_rating_NoiseAndEmission_new", "Micro_rating_Accessibility_new",
                   "Micro_rating_DistrictAndArea_new", "Micro_rating_SunAndView_new",
                   "Micro_rating_ServicesAndNature_new",
@@ -53,10 +53,6 @@ D_selection <- D[,keep_for_now]
 #
 
 lapply(D, function(x) table(is.na(x)))
-
-D_selection <- replace(D_selection,"TRUE",1)
-#taking all variables with 1 or TRUE, converting it into 1s and 0s
-temp <- apply(D_selection, 2, unique)
 
 D_selection <- replace(D_selection,"TRUE",1)
 #taking all variables with 1 or TRUE, converting it into 1s and 0s
