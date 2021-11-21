@@ -92,17 +92,31 @@ View(D %>%
 
 # computing arbeitsmarktregionen
 # merging ms regions with arbeitsmarktregionen
+
+
+## legend
+library(xlsx)
+legend <- read.xlsx("data/legend.xlsx", sheetIndex = 1, header = T)
+legend <- as_tibble(legend)
+legend$MS.Regionen <- as.double(legend$MS.Regionen)
+legend$Arbeitsmarktregionen.2018 <- as.double(legend$Arbeitsmarktregionen.2018)
+legend$Arbeitsmarktgrossregionen.2018 <- as.double(legend$Arbeitsmarktgrossregionen.2018)
+legend$BFS.Gde.nummer <- as.double(legend$BFS.Gde.nummer)
+legend <- legend %>%
+  select(MS.Regionen, Arbeitsmarktregionen.2018, Arbeitsmarktgrossregionen.2018, BFS.Gde.nummer)
+
 ms_avg <- D %>% # we first compute mean m2 per arbeitsmarkt regionen
   filter(!is.na(area)) %>%
   mutate("rent_m2" = rent_full/area) %>%
   select("rent_full", "area", "rent_m2", "rent_m2_pix_avg_km2", "GDENAMK", "KTKZ", "zipcode", "GKODE", "GKODN", "PLZNAME",
          "descr", "floors", "furnished", "lat", "lon", "date","month", "quarter_general",
-         "msregion", "rooms",  "year_built", "newly_built", "balcony",
+         "msregion", "GDENR", "rooms",  "year_built", "newly_built", "balcony",
          "Micro_rating_new", "Micro_rating_NoiseAndEmission_new", "Micro_rating_Accessibility_new",
          "Micro_rating_DistrictAndArea_new", "Micro_rating_SunAndView_new",
          "Micro_rating_ServicesAndNature_new",
          "dist_to_haltst", "dist_to_highway", "dist_to_school_1",
          "dist_to_train_stat", "apoth_pix_count_km2", "restaur_pix_count_km2", "superm_pix_count_km2") %>%
+  left_join(legend, by = c("msregion" = "MS.Regionen", "GDENR" = "BFS.Gde.nummer")) %>%
   group_by(msregion) %>%
   summarise(rent_mean_ms = mean(rent_full))
 
