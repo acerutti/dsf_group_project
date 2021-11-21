@@ -94,6 +94,13 @@ legend$BFS.Gde.nummer <- as.double(legend$BFS.Gde.nummer)
 legend <- legend %>%
   select(MS.Regionen, Arbeitsmarktregionen.2018, Arbeitsmarktgrossregionen.2018, BFS.Gde.nummer)
 
+amr_names <- read.xlsx("data/legend.xlsx", sheetIndex = 3, startRow = 2, header = T)
+amr_names$Code <- as.double(amr_names$Code)
+
+legend <- legend %>%
+  left_join(amr_names, by = c("Arbeitsmarktregionen.2018" = "Code"))
+
+
 ms_quantiles <- D %>% # we first compute quantiles and iqr to get rid of other ranges
   filter(!is.na(area)) %>%
   filter(area >= 25) %>%
@@ -141,3 +148,5 @@ data_analyzed %>%
 
 data_analyzed[,c("balcony", "furnished")] = apply(data_analyzed[,c("balcony", "furnished")], 2, function(x) replace_na(x,0))
 
+
+save(list = c("D", "data_analyzed", "problems"), file = "data/rent_listings_raw.RData")
