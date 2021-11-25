@@ -13,6 +13,7 @@ library(caret)              # cross-validation etc.
 library(rsample)            # data partitions
 library(ranger)             # random forests
 library(randomForest)       # random forest 
+library(janitor)
 
 load("data/rent_listings_raw.RData")
 
@@ -41,7 +42,8 @@ Dmod <- data_analyzed %>%
   bind_cols(onehot_label) %>%
   bind_cols(onehot_hometype) %>%
   select(-c("Label", "home_type")) %>%
-  drop_na()
+  drop_na() %>%
+  clean_names()
 
 
 
@@ -119,6 +121,19 @@ MAE(predict(ols_simple, newdata = testing(split)), testing(split)$rent_full)
 
 ## Random Forests --------------------------------------------------------------
 
+split <- initial_split(
+  Dmod %>%
+    select(rent_full, area, rooms, starts_with("Label")),
+  prop = 0.8
+)
+Dmod_train <- analysis(split)
+Dmod_test <- assessment(split)
 
 
+m1 <- randomForest(
+  formula = rent_full ~ .,
+  data    = Dmod_train
+)
+y_hat <- predict(m1, data = Dmod_test)
+MAE(y_hat$predictions, Dmod_test$rent_full)
 
