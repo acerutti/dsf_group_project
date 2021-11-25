@@ -19,66 +19,105 @@ load("data/rent_listings_raw.RData")
 
 ## Approaches ------------------------------------------------------------------
 
-# 1) Easy linear regression models with different features (cross-validated)
-# 2) Try Random Forests (cross-validated)
-# 3) Try Boosted Trees (cross-validated)
+# 1) Linear regression models with different features (cross-validated)
+# 2) Random Forests (cross-validated)
+# 3) Boosted Trees (cross-validated)
 
 
 ## Preliminary data cleaning ---------------------------------------------------
 modelling_vars <- c("rent_full", "area", "home_type", "furnished", "rooms", 
-                    "Micro_rating_new", "Label", "balcony")
-
-# data for modelling
-D <- data_analyzed %>%
-  select(all_of(modelling_vars)) %>%
-  mutate(attic = ifelse(home_type %in% c("Dachwohnung", "Attika"), 1, 0))
+                    "Label", "balcony")
 
 # onehot encode the Arbeitsmarktregionen
-label_encoding <- dummyVars(~ Label, data = test)
-onehot <- as.data.frame(predict(label_encoding, test))
+label_encoding <- dummyVars(~ Label, data = data_analyzed)
+onehot_label <- as.data.frame(predict(label_encoding, data_analyzed))
+hometype_encoding <- dummyVars(~ home_type, data = data_analyzed)
+onehot_hometype <- as.data.frame(predict(hometype_encoding, data_analyzed))
 
-# data for analysis
-D <- D %>%
-  bind_cols(onehot) %>%
+# data for modelling
+Dmod <- data_analyzed %>%
+  select(all_of(modelling_vars), dplyr::starts_with("dist"),dplyr::starts_with("Micro")) %>%
+  # mutate(attic = ifelse(home_type %in% c("Dachwohnung", "Attika"), 1, 0)) %>% # unselected for now, prediction based on all home_types
+  bind_cols(onehot_label) %>%
+  bind_cols(onehot_hometype) %>%
   select(-c("Label", "home_type")) %>%
   drop_na()
 
 
+
+
 ## OLS -------------------------------------------------------------------------
 
-ols_valset <- function(data, target, features, prop){
-  
-  dat = data[,c(target, features)]
-  dat = na.omit(dat)
-  # data split
-  split = initial_split(dat, prop = prop)
-  data_train = training(split)
-  data_test = training(split)
-  
-  f <- as.formula(noquote(paste(target, "~", ".")))
-  reg <- lm(f, data = data_train)
-  y_hat <- predict(reg, newdata = data_test)
-  
-  mae <- mean(abs(data_test[[target]] - y_hat), na.rm = T)
-  
-  return(mae)
-}
-
-
-## Model 1: all variables, validation set approach
-ols_valset(D %>% drop_na(), 
-           target = "rent_full", 
-           features = setdiff(names(D), "rent_full"), 
-           prop = 0.8)
 
 
 
 
+## Model 1: all variables ------------------------------------------------------
+split <- initial_split(Dmod, prop = 0.8)             # split into training/test
+
+ols_all <- lm(rent_full ~ ., data = training(split))
+summary(ols_all)
+
+y_hat <- predict(ols_all, newdata = testing(split))
+MAE(y_hat, testing(split)$rent_full) # 249
+
+# cross-validation
+data_ctrl <- trainControl(method = "cv", number = 5) 
+ols_all_cv <- train(rent_full ~ .,                    # model to fit
+                     data = Dmod,                        
+                     trControl = data_ctrl,           # folds
+                     method = "lm",                   # specifying regression model
+                     na.action = na.pass)      
+summary(ols_all_cv)
+ols_all_cv$results # results not that incredible. mae is still around 250
+
+
+## Model 2: selected variables with cross validation -------------------------------------------------
+
+# selection of only some variables to prevent overfitting
+split <- initial_split(
+  Dmod %>% 
+    select(all_of(setdiff(modelling_vars, c("home_type", "Label"))), 
+           Micro_rating_new, 
+           dplyr::starts_with("dist")
+           ),
+  prop = 0.8)
+
+ols_sel <- lm(rent_full ~ ., data = training(split))
+MAE(predict(ols_sel, newdata = testing(split)), testing(split)$rent_full) 
+# yields worse results of 330
 
 
 
+## Model 3: "very simple" ------------------------------------------------------
+split <- initial_split(
+  Dmod %>%
+    select(rent_full, area, rooms, Micro_rating_new, starts_with("Label"))
+)
+ols_simple <- lm(rent_full ~ ., data = training(split))
+MAE(predict(ols_simple, newdata = testing(split)), testing(split)$rent_full)
+
+# yields results of 257
+# the most simple model which only controls for area, rooms, micro rating, and
+# location in amr yields equally good results as the model with all components
 
 
+
+## Model 4: "no micro rating" --------------------------------------------------
+split <- initial_split(
+  Dmod %>%
+    select(rent_full, area, rooms, starts_with("Label"))
+)
+ols_simple <- lm(rent_full ~ ., data = training(split))
+MAE(predict(ols_simple, newdata = testing(split)), testing(split)$rent_full)
+
+# similar results but a bit less precise
+
+
+## -----------------------------------------------------------------------------
+
+
+## Random Forests --------------------------------------------------------------
 
 
 
