@@ -184,8 +184,6 @@ flats_canton <- data_analyzed %>% select(KTKZ) %>% mutate(flat = 1)
 ggplot(data = flats_canton, aes(x=KTKZ, y = flat)) + geom_bar(stat = "identity", color ="blue") + labs(title = "Flat offerings depending on canton",
                                                                                                      x = "Canton",
                                                                                                      y = "Number of flat offerings")
-
-
 # Number of flats depending on size
 
 flats_per_size <- data_analyzed %>% select(area, KTKZ) %>% mutate(flat_category = case_when(
