@@ -121,6 +121,10 @@ MAE(predict(ols_simple, newdata = testing(split)), testing(split)$rent_full)
 
 ## Random Forests --------------------------------------------------------------
 
+### Don't use randomForest package. It's too slow! Use ranger instead
+
+
+## Model 1: Selected Variables as shown ----------------------------------------
 split <- initial_split(
   Dmod %>%
     select(rent_full, area, rooms, starts_with("Label")),
@@ -130,10 +134,72 @@ Dmod_train <- analysis(split)
 Dmod_test <- assessment(split)
 
 
-m1 <- randomForest(
+m1 <- ranger(
   formula = rent_full ~ .,
   data    = Dmod_train
 )
 y_hat <- predict(m1, data = Dmod_test)
 MAE(y_hat$predictions, Dmod_test$rent_full)
 
+
+## Model 2: all variables ------------------------------------------------------
+split <- initial_split(Dmod)
+m2 <- ranger(
+  formula = rent_full ~ .,
+  data = analysis(split)
+)
+y_hat <- predict(m2, data = assessment(split))
+MAE(y_hat$predictions, assessment(split)$rent_full) # lowest MAE with 230
+
+which.min(m2$prediction.error)
+
+
+
+## Hyper-parameter tuning -------------------------------------------------------
+Dmod_train <- analysis(split)
+# we start with a hyper-parameter grid as introduced in the lecture
+hyper_grid <- expand.grid(
+  mtry       = seq(20, 30, by = 2),
+  node_size  = seq(3, 9, by = 2),
+  sampe_size = c(.55, .632, .70, .80),
+  OOB_RMSE   = 0 # a place to dump results
+)
+
+
+for(i in 1:nrow(hyper_grid)) {
+  
+  # train model
+  model <- ranger(
+    formula         = rent_full ~ ., 
+    data            = Dmod_train, 
+    num.trees       = 500,
+    mtry            = hyper_grid$mtry[i],
+    write.forest    = FALSE,
+    min.node.size   = hyper_grid$node_size[i],
+    sample.fraction = hyper_grid$sampe_size[i],
+    oob.error       = TRUE,
+    verbose         = TRUE,
+    seed            = 123
+  )
+  
+  # add OOB error to grid
+  hyper_grid$OOB_RMSE[i] <- sqrt(model$prediction.error)
+}
+
+
+hyper_grid %>% arrange(OOB_RMSE)
+
+# results
+#mtry  node_size      sampe_size OOB_RMSE
+#1     30         3      0.800   324.0606
+#2     30         5      0.800   324.7636
+#3     26         3      0.800   325.0434
+#4     28         3      0.800   325.1838
+#5     28         5      0.800   325.5639
+#6     30         7      0.800   325.7180
+#7     26         5      0.800   325.7482
+#8     30         3      0.700   326.0298
+#9     24         3      0.800   326.2729
+#10    28         3      0.700   326.3092
+
+# results don't wary by a lot though
