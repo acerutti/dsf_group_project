@@ -42,7 +42,7 @@ test2 <- summary_table(dplyr::group_by(data_analyzed_for_summmary_statistics, KT
 
 ## Visualisations ----
 
-# Rent price depending on are
+# Rent price (full / per m2) depending on area
 
 ggplot(data_analyzed, aes(x = area, y = rent_full)) +
   geom_point() +
@@ -62,19 +62,41 @@ ggplot(data_analyzed, aes(x = area, y = rent_full, col = KTKZ)) +
        y = "Rent price (full)")
 
 
-# Average rent per canton
+ggplot(data_analyzed, aes(x = area, y = rent_m2, col = KTKZ)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "black") +                             # add linear regressions
+  geom_hline(yintercept = mean(data_analyzed$rent_m2), col = "blue") + # add average rent price
+  labs(title ="Rent m2 price depending on flat size",
+       x = "Flat size",
+       y = "Rent price (full)")
+
+
+# Average rent (full / per m2) per canton
 avg_rent_per_canton <- data_analyzed %>%
                                 select(rent_full,KTKZ) %>%
                                 group_by(KTKZ) %>% 
-                                summarize(avg_cantonal_rent = mean(rent_full))
+                                summarize(avg_cantonal_rent = mean(rent_full)) %>%
+                                arrange(avg_cantonal_rent)
 
 
-ggplot(avg_rent_per_canton) + geom_point(aes(x = KTKZ, y = avg_cantonal_rent)) +
+ggplot(avg_rent_per_canton) + geom_point(aes(x = reorder(KTKZ, -avg_cantonal_rent), y = avg_cantonal_rent)) +
                             geom_hline(yintercept = mean(data_analyzed$rent_full), col = "blue") +
                             labs(title ="Average rent per canton",
                              x = "Canton",
                              y = "Average Rent price (full)")
                           
+
+avg_rent_m2_per_canton <- data_analyzed %>%
+                            select(rent_m2,KTKZ) %>%
+                            group_by(KTKZ) %>% 
+                            summarize(avg_cantonal_rent_m2 = mean(rent_m2)) %>% 
+                            arrange(avg_cantonal_rent_m2)
+
+ggplot(avg_rent_m2_per_canton) + geom_point(aes(x = reorder(KTKZ, avg_cantonal_rent_m2), y = avg_cantonal_rent_m2)) +
+  geom_hline(yintercept = mean(data_analyzed$rent_m2), col = "blue") +
+  labs(title ="Average rent m2 per canton",
+       x = "Canton",
+       y = "Average Rent price per m2")
 
 
 # Average rent per Arbeitsmarktgrossregion
@@ -155,7 +177,8 @@ ggplot(size_per_yearbuilt, aes(x = year_built, y = area)) +
 
 
 
-# Flats depending on rooms and cantons
+# Flats depending cantons
+
 
 flats_canton <- data_analyzed %>% select(KTKZ) %>% mutate(flat = 1)
 ggplot(data = flats_canton, aes(x=KTKZ, y = flat)) + geom_bar(stat = "identity", color ="blue") + labs(title = "Flat offerings depending on canton",
@@ -172,16 +195,70 @@ flats_per_size <- data_analyzed %>% select(area, KTKZ) %>% mutate(flat_category 
                     area >=100 & area <=119  ~  "100-119",
                     area >=120  & area <=159 ~  "120-159",
                     area >=160  ~  ">160")
-) %>% mutate(flat = 1)
+) %>%
+  group_by(flat_category) %>%
+  summarize(number_of_flats = length(flat_category))
 
-flats_per_size_count = aggregate(x =flats_per_size$flat,
-                                 by = list(flats_per_size$flat_category), 
-                                 FUN = sum)
 
-flats_per_size_count$Group.1 <- factor(flats_per_size_count$Group.1,
+flats_per_size$flat_category <- factor(flats_per_size$flat_category ,
                                   levels = c("<60", "60-79", "80-99", "100-119", "120-159", ">160")) # Rearrange the order
 
-ggplot(data = flats_per_size_count, aes(x=Group.1, y = x)) + geom_bar(stat = "identity", color ="blue", fill = "orange") + labs(title = "Flat offerings in 2019 depending on flat size",
+ggplot(data = flats_per_size, aes(x=flat_category, y = number_of_flats)) + geom_bar(stat = "identity", color ="blue", fill = "orange") + labs(title = "Flat offerings in 2019 depending on flat size",
                                                                                                                                 x = "Flat category",
                                                                                                                                 y = "Number of flat offerings")
+
+
+# Rent price depending on balcony
+
+rent_balcony <-  data_analyzed %>% select (rent_full, balcony) %>%
+                  group_by(balcony) %>%
+                  summarize(avg_rent = mean(rent_full))
+
+ggplot(rent_balcony) + geom_line(aes(x = balcony, y = avg_rent)) +
+  geom_hline(yintercept = mean(data_analyzed$rent_full), col = "blue") + # average rent price in Switzerland
+  labs(title ="Average rent depending on balcony",
+       x = "Balcony",
+       y = "Average Rent price (full)")
+
+
+# Rent price depending on micro rating new
+
+rent_per_micro_rating <- data_analyzed %>% select(rent_full, Micro_rating_new) %>% mutate(micro_rating_cluster = case_when(
+  Micro_rating_new <1.5  ~  1,
+  Micro_rating_new >=1.5 & Micro_rating_new <2.5  ~ 2,
+  Micro_rating_new >=2.5 & Micro_rating_new <3.5  ~ 3,
+  Micro_rating_new >=3.5 & Micro_rating_new <4.5  ~ 4,
+  Micro_rating_new >=4.5 & Micro_rating_new <5.5 ~  5,
+  Micro_rating_new >=5.5 & Micro_rating_new <6.5 ~  6,
+  Micro_rating_new >=6.5 & Micro_rating_new <7.5 ~  7,
+  Micro_rating_new >=7.5 & Micro_rating_new <8.5 ~  8,
+  Micro_rating_new >=8.5 & Micro_rating_new <9.5 ~  9,
+  Micro_rating_new >=9.5 & Micro_rating_new <10.5 ~  10
+ )
+) %>% 
+  group_by(micro_rating_cluster) %>%
+  summarize(avg_rent = mean(rent_full))
+
+regression_rent_micro_rating_new = lm(rent_full ~ (Micro_rating_new), data_analyzed) # regression of rent_full on all Micro_rating_new without rounding
+regression_rent_micro_rating_new_2 = lm(avg_rent ~ (micro_rating_cluster), rent_per_micro_rating) # regression of avg_rent_full on clustered (rounded) micro_ratings_new
+
+ggplot(rent_per_micro_rating) + geom_point(aes(x = micro_rating_cluster, y = avg_rent)) +
+  geom_hline(yintercept = mean(data_analyzed$rent_full), col = "blue") + # average rent price in Switzerland
+  geom_abline(intercept = regression_rent_micro_rating_new$coefficients[1], slope = regression_rent_micro_rating_new$coefficients[2], col = "red") +
+  geom_abline(intercept = regression_rent_micro_rating_new_2$coefficients[1], slope = regression_rent_micro_rating_new_2$coefficients[2], col = "magenta") +
+  labs(title ="Average rent depending on micro rating new (rounded)",
+       x = "Micro Rating New (rounded)",
+       y = "Average Rent price (full)")
+
+
+# Flat size depending on number of rooms
+
+ggplot(data_analyzed, aes(x = rooms, y = area)) +
+  geom_point() +
+  geom_hline(yintercept = mean(data_analyzed$area), col = "blue") + # average area in Switzerland
+  geom_smooth(method = "lm", col = "red") +
+  labs(title ="Flat size (area) depending on number of rooms",
+       x = "Number of rooms",
+       y = "Flat size (area)")
+
 
