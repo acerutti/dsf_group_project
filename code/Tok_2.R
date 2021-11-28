@@ -16,7 +16,7 @@ library(lubridate)
 library(textdata)
 library(tidyr)
 
-# D "area" ----
+### D "area" ----
 
 # In this section, we want to improve our data sets by looking if we can find values
 # in the appartment description (variable "descr") that were not captured in their
@@ -204,9 +204,10 @@ rooms_diagnosis %>%
 
 # We have an accuracy of 83%, which is pretty good. If we have a look at how off 
 # the values obtained through tokenization are when the score is 0, we also see that 
-# it is not too off (if interested, look rowid = ). For some of them, what we 
-# capture through tokenisation is actually accurate whereas what is in "area" 
-# does not correspond to their description! (see rowid = )
+# it is not too off: if we run everything except the last line and view, we can look at 
+# rowid = 24, the prediction is 4.5 instead of 4. And for some of them (including rowid 
+# = 24), what we capture through tokenisation is actually accurate and what is in "area" 
+# does not correspond to their description!
 
 # We now assign the "rooms" their values where there were NAs in the dataset:
 
