@@ -1,10 +1,10 @@
-################################################################################
+###############################################################################*
 #
 # DSF Group Project
 # Script 5: Modelling
 # 24.11.2021
 #
-################################################################################
+###############################################################################*
 
 rm(list = ls())
 
@@ -24,34 +24,50 @@ load("data/rent_listings_raw.RData")
 # 2) Random Forests (cross-validated)
 # 3) Boosted Trees (cross-validated)
 
-
+###############################################################################*
 ## Preliminary data cleaning ---------------------------------------------------
+###############################################################################*
+
+# Variables which can be used for modelling
 modelling_vars <- c("rent_full", "area", "home_type", "furnished", "rooms", 
                     "Label", "balcony")
 
-# onehot encode the Arbeitsmarktregionen
+# Onehot-encode the Arbeitsmarktregionen and home_types
 label_encoding <- dummyVars(~ Label, data = data_analyzed)
 onehot_label <- as.data.frame(predict(label_encoding, data_analyzed))
 hometype_encoding <- dummyVars(~ home_type, data = data_analyzed)
 onehot_hometype <- as.data.frame(predict(hometype_encoding, data_analyzed))
 
-# data for modelling
+# Data for modelling
 Dmod <- data_analyzed %>%
-  select(all_of(modelling_vars), dplyr::starts_with("dist"),dplyr::starts_with("Micro")) %>%
-  # mutate(attic = ifelse(home_type %in% c("Dachwohnung", "Attika"), 1, 0)) %>% # unselected for now, prediction based on all home_types
+  select(all_of(modelling_vars), 
+         dplyr::starts_with("dist"),
+         dplyr::starts_with("Micro")) %>%
   bind_cols(onehot_label) %>%
   bind_cols(onehot_hometype) %>%
   select(-c("Label", "home_type")) %>%
   drop_na() %>%
-  clean_names() # makes titles clean (capitals become lower-case, brackets deleted, etc.) (e.g. Wil (SG) becomes wil_sg)
+  clean_names() # makes titles clean 
+                # (capitals become lower-case, brackets deleted, etc.) 
+                # (e.g. Wil (SG) becomes wil_sg)
+
+# Set up data frame where we can push all results of all models to
+model_results <- data.frame(NULL)
 
 
-
-
+###############################################################################*
 ## OLS -------------------------------------------------------------------------
+###############################################################################*
 
-
-
+###############################################################################*
+#
+### OLS - Notes
+# Explain all models
+# 
+# TO DO
+# make models with polynomials
+# run cv errors for all
+###############################################################################*
 
 
 ## Model 1: all variables ------------------------------------------------------
@@ -129,16 +145,16 @@ mod_all <- lm(rent_full ~ ., data = analysis(split))
 MAE(predict(mod_all, newdata = testing(split)), testing(split)$rent_full)
 ## doesn't help a lot, worries about overfitting
 
-## -----------------------------------------------------------------------------
 
-#### TO DO
-# make models with polynomials
-# insert
 
+###############################################################################*
 ## Random Forests --------------------------------------------------------------
+###############################################################################*
 
+###############################################################################*
+### RANDOM FOREST - NOTES
 ### Don't use randomForest package. It's too slow! Use ranger instead
-
+###############################################################################*
 
 ## Model 1: Selected Variables as shown ----------------------------------------
 split <- initial_split(
@@ -170,42 +186,55 @@ MAE(y_hat$predictions, assessment(split)$rent_full) # lowest MAE with 230
 which.min(m2$prediction.error)
 
 
+###############################################################################*
+## Hyper-parameter tuning ------------------------------------------------------
+###############################################################################*
 
-## Hyper-parameter tuning -------------------------------------------------------
-Dmod_train <- analysis(split)
+###############################################################################*
+### HYPER-PARAMETER TUNING - NOTES:
+# We do a hyper-parameter tuning for a random forest with all the variables in
+# modelling_vars, distance, and microlocations
+#
+# Only run this section if you want to replicate the results!
+###############################################################################*
+
+
+# Dmod_train <- analysis(split)
+
 # we start with a hyper-parameter grid as introduced in the lecture
-hyper_grid <- expand.grid(
-  mtry       = seq(20, 30, by = 2),
-  node_size  = seq(3, 9, by = 2),
-  sampe_size = c(.55, .632, .70, .80),
-  OOB_RMSE   = 0 # a place to dump results
-)
+# hyper_grid <- expand.grid(
+#  mtry       = seq(20, 30, by = 2),
+#  node_size  = seq(3, 9, by = 2),
+#  sampe_size = c(.55, .632, .70, .80),
+#  OOB_RMSE   = 0 # a place to dump results
+#)
 
 
-for(i in 1:nrow(hyper_grid)) {
-  
-  # train model
-  model <- ranger(
-    formula         = rent_full ~ ., 
-    data            = Dmod_train, 
-    num.trees       = 500,
-    mtry            = hyper_grid$mtry[i],
-    write.forest    = FALSE,
-    min.node.size   = hyper_grid$node_size[i],
-    sample.fraction = hyper_grid$sampe_size[i],
-    oob.error       = TRUE,
-    verbose         = TRUE,
-    seed            = 123
-  )
+# for(i in 1:nrow(hyper_grid)) {
+#  
+#  
+#  model <- ranger(
+#    formula         = rent_full ~ ., 
+#    data            = Dmod_train, 
+#    num.trees       = 500,
+#    mtry            = hyper_grid$mtry[i],
+#    write.forest    = FALSE,
+#    min.node.size   = hyper_grid$node_size[i],
+#    sample.fraction = hyper_grid$sampe_size[i],
+#    oob.error       = TRUE,
+#    verbose         = TRUE,
+#    seed            = 123
+#  )
   
   # add OOB error to grid
-  hyper_grid$OOB_RMSE[i] <- sqrt(model$prediction.error)
-}
+#  hyper_grid$OOB_RMSE[i] <- sqrt(model$prediction.error)
+#}
 
 
-hyper_grid %>% arrange(OOB_RMSE)
+# hyper_grid %>% arrange(OOB_RMSE)
 
-# results
+# results (OOB_RMSE) don't wary by much. Nonetheless, here are the top 10 models
+
 #      mtry  node_size  sampe_size OOB_RMSE
 #1     30         3      0.800   324.0606
 #2     30         5      0.800   324.7636
@@ -218,4 +247,17 @@ hyper_grid %>% arrange(OOB_RMSE)
 #9     24         3      0.800   326.2729
 #10    28         3      0.700   326.3092
 
-# results don't wary by a lot though
+
+###############################################################################*
+## Boosted Decision Trees ------------------------------------------------------
+###############################################################################*
+
+
+###############################################################################*
+### BOOSTING - NOTES
+# 
+# Hi Alessandra :), please use the Dmod dataset if you model any boosted trees
+# the variables there are already onehot encoded and everything else is good
+# to go.
+###############################################################################*
+
