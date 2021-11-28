@@ -68,7 +68,7 @@ improved_data_analyzed[unique(balcony_appartments$rowid),"balcony"] <- 1 # 8997 
 
 ### home_type ----
 
-homes = c("wohnung","attika","dachwohnung","terrassenwohnung","maisonette",      
+home_type_words = c("wohnung","attika","dachwohnung","terrassenwohnung","maisonette",      
               "studio","loft","ferienwohnung", "attique", "soffitta", "attico","sottotetto", "duplex")
 
 new_home_types = tok %>% filter(word %in% homes)
@@ -84,7 +84,7 @@ new_home_types = new_home_types %>%
 improved_data_analyzed[unique(balcony_appartments$rowid),"balcony"] <- 1
 # I still need to do an ifelse and put the translations together
 
-### number of rooms ----
+### rooms ----
 
 number <- as.character(c(seq(from=1, to=10, by=0.5),
                          paste(seq(from=1, to = 10, by=1), sep= ",",5))) 
@@ -138,25 +138,68 @@ area_bigrams = area_bigrams %>% select(descr, area, word1, word2)
 D[unique(area_bigrams$rowid),"area"] <- as.numeric(area_bigrams$word1) 
 
 ### DIAGNOSIS -----
-balcony_appartments <- tok %>% filter(balcony == 0) %>%
+balcony_tok <- tok %>% filter(balcony == 1) %>% 
   filter(word %in% balcony_words) %>% 
   distinct(rowid, .keep_all = TRUE)
 
-improved_data_analyzed[unique(balcony_appartments$rowid),"balcony"] <- 1
+D_tok = D_tok %>% mutate(balcony_tok = ifelse(rowid %in% balcony_tok$rowid,1,0), 
+                         balcony_test = ifelse(balcony_tok != balcony, 0, 1))
 
-D_tok %>% mutate(balcony_tok = ..)
+D_tok %>% filter(!rowid %in% balcony_appartments$rowid) %>%
+  summarise(balcony_correct = mean(balcony_test))
+
+mean(D_tok$balcony_test)
+
+furnished_tok <- tok %>% filter(furnished == 1) %>%
+  filter(word %in% furnished_words)
+
+no_furniture_tok <- bigrams %>%
+  filter(rowid %in% furnished_appartments$rowid) %>% #if remove this line get rid of the 2
+  separate(bigram, c("word1", "word2"), sep = " ") %>%
+  filter(word1 %in% negation) %>%
+  filter(word2 %in% furnished_words) %>%
+  unite(bigram, word1, word2, sep = " ", remove = F) %>%
+  distinct(rowid, .keep_all = TRUE)
+
+D_tok = D_tok %>% mutate(furnished_tok = ifelse(rowid %in% furnished_tok$rowid,1,0), 
+                         furnished_test = ifelse(furnished_tok != furnished, 0, 1))
+
+D_tok %>% filter(!rowid %in% furnished_appartments$rowid) %>%
+  summarise(furnished_correct = mean(furnished_test))
+
+new_rooms_tok <- bigrams %>%
+  filter(is.na(rooms) == F) %>%
+  separate(bigram, c("word1", "word2"), sep = " ") %>%
+  filter(word1 %in% number) %>%
+  filter(word2 %in% room) %>%
+  unite(bigram, word1, word2, sep = " ", remove = F) %>%
+  distinct(rowid, .keep_all = TRUE)  # those where it appears more than once... 
+                                     # hoping that the 1st one is the correct one
 
 
 
+improved_data_analyzed[unique(new_rooms$rowid),"rooms"] <- as.numeric( 
+  ifelse(new_rooms$word1 %in% number[1:19], 
+         new_rooms$word1, 
+         (paste((substr(new_rooms$word1,1,1)), sep= ".",5))))
 
+trigrams_test <- D_tok %>% 
+  filter(is.na(rooms) == F) %>%
+  unnest_tokens(trigram, descr, token = "ngrams", n = 3, drop = F) %>% 
+  separate(trigram, c("word1", "word2", "word3"), sep = " ") %>%
+  filter((word2 == "1" & word3 =="2")) %>%
+  unite(word2, word2, word3, sep = "/", remove = F) %>%
+  filter(word1 %in% number) %>%
+  distinct(rowid, .keep_all = TRUE)
 
+new_rooms_tok = new_rooms_tok %>% filter(rowid = trigrams_test$rowid) %>% 
+  
 
-
-
-
-
-
-
+  
+  
+  
+  
+save(D, data_analyzed, dclean , problems, file = "data/rent_listings.RData")
 
 
 
