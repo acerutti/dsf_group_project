@@ -54,7 +54,7 @@ ggplot(data_analyzed, aes(x = area, y = rent_full)) +
 
 
 ggplot(data_analyzed, aes(x = area, y = rent_full, col = KTKZ)) +
-  geom_point() +
+  geom_point(size = 0.8) +
   geom_smooth(method = "lm", col = "red") +                             # add linear regressions
   geom_hline(yintercept = mean(data_analyzed$rent_full), col = "blue") + # add average rent price
   labs(title ="Rent price depending on flat size",
@@ -115,12 +115,12 @@ ggplot(avg_rent_per_Arbeitsmarktgrossregion) + geom_point(aes(x = Arbeitsmarktgr
 
 
 
-# Average rent per room size
+# Average rent per room number
 
 avg_rent_per_room_size <- data_analyzed %>%
                               select(rent_full,rooms) %>%
                               group_by(rooms) %>% 
-                              summarize(avg_rent_rooms = mean(rent_full)) %>% filter (rooms > "15")
+                              summarize(avg_rent_rooms = mean(rent_full,na.rm=TRUE)) %>% filter(rooms < 15)
 
 avg_room_number <- data_analyzed$rooms %>% na.omit() %>% mean()
 
@@ -130,7 +130,7 @@ avg_room_number <- data_analyzed$rooms %>% na.omit() %>% mean()
 ggplot(data_analyzed) + geom_point(aes(x = rooms, y = rent_full)) +
   geom_hline(yintercept = mean(data_analyzed$rent_full), col = "blue")+ # average rent price in Switzerland
   labs(title ="Rent price depending on number of rooms",
-       x = "NUmber of rooms",
+       x = "Number of rooms",
        y = " Rent price (full)")
 
 
@@ -251,7 +251,7 @@ ggplot(rent_per_micro_rating) + geom_point(aes(x = micro_rating_cluster, y = avg
 
 # Flat size depending on number of rooms
 
-ggplot(data_analyzed, aes(x = rooms, y = area)) +
+ggplot(data_analyzed, aes(x = rooms, y = area, col = home_type)) +
   geom_point() +
   geom_hline(yintercept = mean(data_analyzed$area), col = "blue") + # average area in Switzerland
   geom_smooth(method = "lm", col = "red") +
