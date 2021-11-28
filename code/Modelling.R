@@ -43,7 +43,7 @@ Dmod <- data_analyzed %>%
   bind_cols(onehot_hometype) %>%
   select(-c("Label", "home_type")) %>%
   drop_na() %>%
-  clean_names()
+  clean_names() # makes titles clean (capitals become lower-case, brackets deleted, etc.) (e.g. Wil (SG) becomes wil_sg)
 
 
 
@@ -63,6 +63,9 @@ summary(ols_all)
 y_hat <- predict(ols_all, newdata = testing(split))
 MAE(y_hat, testing(split)$rent_full) # 249
 
+
+MAE(y_hat, testing(split)$rent_full)/mean(Dmod$rent_full) # in relation to mean price
+
 # cross-validation
 data_ctrl <- trainControl(method = "cv", number = 5) 
 ols_all_cv <- train(rent_full ~ .,                    # model to fit
@@ -80,7 +83,7 @@ ols_all_cv$results # results not that incredible. mae is still around 250
 split <- initial_split(
   Dmod %>% 
     select(all_of(setdiff(modelling_vars, c("home_type", "Label"))), 
-           Micro_rating_new, 
+           micro_rating_new, 
            dplyr::starts_with("dist")
            ),
   prop = 0.8)
@@ -94,7 +97,7 @@ MAE(predict(ols_sel, newdata = testing(split)), testing(split)$rent_full)
 ## Model 3: "very simple" ------------------------------------------------------
 split <- initial_split(
   Dmod %>%
-    select(rent_full, area, rooms, Micro_rating_new, starts_with("Label"))
+    select(rent_full, area, rooms, micro_rating_new, starts_with("label"))
 )
 ols_simple <- lm(rent_full ~ ., data = training(split))
 MAE(predict(ols_simple, newdata = testing(split)), testing(split)$rent_full)
@@ -108,16 +111,29 @@ MAE(predict(ols_simple, newdata = testing(split)), testing(split)$rent_full)
 ## Model 4: "no micro rating" --------------------------------------------------
 split <- initial_split(
   Dmod %>%
-    select(rent_full, area, rooms, starts_with("Label"))
+    select(rent_full, area, rooms, starts_with("label"))
 )
 ols_simple <- lm(rent_full ~ ., data = training(split))
 MAE(predict(ols_simple, newdata = testing(split)), testing(split)$rent_full)
 
 # similar results but a bit less precise
 
+## Model 5: "all variables including cantons, etc." ----------------------------
+split <- initial_split(
+  data_analyzed %>%
+    select(all_of(modelling_vars), dplyr::starts_with("dist"),dplyr::starts_with("Micro"), KTKZ, Arbeitsmarktgrossregionen.2018) %>%
+    drop_na()
+)
+
+mod_all <- lm(rent_full ~ ., data = analysis(split))
+MAE(predict(mod_all, newdata = testing(split)), testing(split)$rent_full)
+## doesn't help a lot, worries about overfitting
 
 ## -----------------------------------------------------------------------------
 
+#### TO DO
+# make models with polynomials
+# insert
 
 ## Random Forests --------------------------------------------------------------
 
@@ -127,7 +143,7 @@ MAE(predict(ols_simple, newdata = testing(split)), testing(split)$rent_full)
 ## Model 1: Selected Variables as shown ----------------------------------------
 split <- initial_split(
   Dmod %>%
-    select(rent_full, area, rooms, starts_with("Label")),
+    select(rent_full, area, rooms, starts_with("label")),
   prop = 0.8
 )
 Dmod_train <- analysis(split)
@@ -139,7 +155,7 @@ m1 <- ranger(
   data    = Dmod_train
 )
 y_hat <- predict(m1, data = Dmod_test)
-MAE(y_hat$predictions, Dmod_test$rent_full)
+MAE(y_hat$predictions, Dmod_test$rent_full) # MAE 250
 
 
 ## Model 2: all variables ------------------------------------------------------
@@ -190,7 +206,7 @@ for(i in 1:nrow(hyper_grid)) {
 hyper_grid %>% arrange(OOB_RMSE)
 
 # results
-#mtry  node_size      sampe_size OOB_RMSE
+#      mtry  node_size  sampe_size OOB_RMSE
 #1     30         3      0.800   324.0606
 #2     30         5      0.800   324.7636
 #3     26         3      0.800   325.0434
