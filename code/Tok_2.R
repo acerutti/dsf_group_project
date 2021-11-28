@@ -61,8 +61,8 @@ area_bigrams <- D %>% filter(is.na(area) == T) %>%
   
   select(rowid, descr, area, word1, word2)
 
-# Those are 516 observations where we could detect an "area" thanks to tokenization
-# This represents 516/5089 = 10% of the maximum we could have predicted.
+# Those are 520 observations where we could detect an "area" thanks to tokenization
+# This represents 520/5089 = 10% of the maximum we could have predicted.
 
 # If we wanted to assign them to D to improve it, we would have used this command: 
 
@@ -84,7 +84,7 @@ D %>% filter(!is.na(area)) %>%
   distinct(rowid, .keep_all = TRUE) %>%
   mutate(word1 = as.double(word1)) %>%
   mutate(score = ifelse(area == word1, 1,0)) %>%
-  summarise(diagnosis = mean(area_score))
+  summarise(diagnosis = mean(score))
 
 # this has an accuracy of 74% on the whole dataset, which is pretty good.
 # However, if we view the code above without the last line (we don't run it 
@@ -196,7 +196,7 @@ trigrams_diagnosis <- D_tok %>%
   select(rowid, rooms, word_a, word_b)
 
 rooms_diagnosis %>% 
-  left_join(trigrams_diagnosis, by = c("rowid" = "rowid")) %>%
+  left_join(trigrams_diagnosis, by = c("rowid" = "rowid", "rooms" = "rooms")) %>%
   mutate(room_pred = ifelse(is.na(word_a), word1, as.double(word_a) + 0.5)) %>%
   select(rowid, rooms, descr, room_pred) %>%
   mutate(score = ifelse(rooms == room_pred, 1,0)) %>% 
@@ -265,7 +265,7 @@ home_type_words = c("wohnung","attika","dachwohnung","terrassenwohnung","maisone
               "studio","loft","ferienwohnung", "attique", "soffitta", "attico","sottotetto", "duplex")
 
 new_home_types = tok %>% filter(word %in% home_type_words) %>% 
-  mutate(home_type = tolower(new_home_types$home_type)) %>%
+  mutate(home_type = tolower(home_type)) %>%
   filter(home_type != word) %>% 
   filter(word != "wohnung") %>% 
   
