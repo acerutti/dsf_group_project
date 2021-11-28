@@ -20,11 +20,16 @@ load("data/rent_listings_raw.RData")
 ###### Summary statistics ----
 
 
-data_analyzed_for_summmary_statistics = data_analyzed %>% select(, c(2,3,5,7,13,20:36))
+# data_analyzed_for_summmary_statistics = data_analyzed %>% select(, c(2,3,5,7,13,20:36))
+
+data_analyzed_for_summmary_statistics = data_analyzed %>% select(, c(2,3,5,7,20:24))
 
 st(data_analyzed_for_summmary_statistics) # whole data set
 
 st(data_analyzed_for_summmary_statistics, group = 'KTKZ', group.long = TRUE) # summary statistics per canton
+
+
+## Provide summary statistics for certain cities (Arbeitsmarktregionen Zürich, Geneveva, St.Gallen)
 
 
   # Alternative summary statistics (does not give me a nice output)
