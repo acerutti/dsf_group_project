@@ -248,7 +248,7 @@ gbm.fit <- gbm(
   formula = rent_full ~ .,
   distribution = "gaussian",
   data = Dmod_train,
-  n.trees = 4000,
+  n.trees = 20000,
   interaction.depth = 1,
   shrinkage = 0.001,
   cv.folds = 5,
@@ -275,12 +275,18 @@ print(gbm.fit)
 # Time difference of 7.881699 mins
 # The best cross-validation iteration was 4000. There were 120 predictors of which 6 had non-zero influence.
 
+# Result for 20000 trees:
+# Time difference of 1.879366 hours
+# The best cross-validation iteration was 20000. There were 120 predictors of which 30 had non-zero influence.
+
+
 # get MSE and compute RMSE
 sqrt(min(gbm.fit$cv.error))
 ## With 100 trees: 660.7521 CHF off the real price
 ## With 1000 trees: 566.5158 CHF off the real price
 ## With 2000 trees: 524.6013
 ## With 4000 trees: 484.7614
+## With 20000 trees: 407.6505
 
 # plot loss function as a result of n trees added to the ensemble
 gbm.perf(gbm.fit, method = "cv")
