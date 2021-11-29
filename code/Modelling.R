@@ -61,8 +61,8 @@ Dmod <- data_analyzed %>%
 # (e.g. Wil (SG) becomes wil_sg)
 
 # Set up data frame where we can push all results of all models to
-model_results <- data.frame(matrix(ncol = 6, nrow = 15))
-names(model_results) <- c("model_nr", "model_type", "rmse_cv", "mae_cv", "mae", "mae/mean")
+ols_results <- data.frame(matrix(ncol = 6, nrow = 5))
+names(ols_results) <- c("model_nr", "model_type", "rmse_cv", "mae_cv", "mae", "mae/mean")
 
 
 
@@ -114,7 +114,7 @@ mae <- MAE(y_hat, testing(split)$rent_full)          # mae: 244.78
 
 mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) # in relation to mean price: 13.97%
 
-model_results[1,] <- c(1, "OLS", rmse_cv, mae_cv, mae, mae_mean)
+ols_results[1,] <- c(1, "OLS", rmse_cv, mae_cv, mae, mae_mean)
 
 
 ## Model 2: selected variables with cross validation ---------------------------
@@ -152,7 +152,9 @@ mae <- MAE(y_hat, testing(split)$rent_full)
 
 mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) # in relation to mean price: 18.96%
 
-model_results[2,] <- c(2, "OLS", rmse_cv, mae_cv, mae, mae_mean)
+ols_results[2,] <- c(2, "OLS", rmse_cv, mae_cv, mae, mae_mean)
+
+
 
 ## Model 3: "very simple" ------------------------------------------------------
 
@@ -185,7 +187,7 @@ mae <- MAE(y_hat, testing(split)$rent_full)         # mae: 256.72
 
 mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) # in relation to mean price: 14.69%
 
-model_results[3,] <- c(3, "OLS", rmse_cv, mae_cv, mae, mae_mean)
+ols_results[3,] <- c(3, "OLS", rmse_cv, mae_cv, mae, mae_mean)
 
 
 ## Model 4: "squared variables" ------------------------------------------------
@@ -222,7 +224,7 @@ mae <- MAE(y_hat, testing(split)$rent_full)         # mae: 248.32
 
 mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) # in relation to mean price: 14.12%
 
-model_results[4,] <- c(4, "OLS", rmse_cv, mae_cv, mae, mae_mean)
+ols_results[4,] <- c(4, "OLS", rmse_cv, mae_cv, mae, mae_mean)
 
 
 
@@ -264,7 +266,7 @@ mae <- MAE(y_hat, testing(split)$rent_full)         # mae: 249.74
 
 mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) # in relation to mean price
 
-model_results[5,] <- c(5, "OLS", rmse_cv, mae_cv, mae, mae_mean)
+ols_results[5,] <- c(5, "OLS", rmse_cv, mae_cv, mae, mae_mean)
 
 
 
@@ -312,7 +314,7 @@ which.min(m2$prediction.error)
 
 
 ###############################################################################*
-## Hyper-parameter tuning ------------------------------------------------------
+## Hyper-parameter tuning - Random Forest---------------------------------------
 ###############################################################################*
 
 ###############################################################################*
