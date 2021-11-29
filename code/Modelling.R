@@ -399,12 +399,15 @@ for(i in 1:nrow(hyper_grid)) {
     min.node.size   = hyper_grid$node_size[i],
     sample.fraction = hyper_grid$sampe_size[i],
     oob.error       = TRUE,
-    verbose         = TRUE,
+    verbose         = FALSE,
     seed            = 123
 )
 
 # add OOB error to grid
 hyper_grid$OOB_RMSE[i] <- sqrt(model$prediction.error)
+
+# progress
+print(i)
 }
 
 
