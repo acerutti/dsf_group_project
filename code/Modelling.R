@@ -67,7 +67,6 @@ names(ols_results) <- c("model_nr", "model_type", "rmse_cv", "mae_cv", "mae", "m
 
 
 
-
 ###############################################################################*
 ## OLS -------------------------------------------------------------------------
 ###############################################################################*
@@ -117,7 +116,7 @@ mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) 
 ols_results[1,] <- c(1, "OLS", rmse_cv, mae_cv, mae, mae_mean)
 
 
-## Model 2: selected variables with cross validation ---------------------------
+## Model 2: Selected variables--------------------------------------------------
 
 # Vars used: area, rooms, furnished (yes/no), balcony (yes/no), micro ratings,
 # distances to places of interest
@@ -147,7 +146,7 @@ ols_2 <- lm(rent_full ~ ., data = training(split))
 
 # error (validation set approach)
 y_hat <- predict(ols_2, newdata = testing(split))
-mae <- MAE(y_hat, testing(split)$rent_full)
+mae <- MAE(y_hat, testing(split)$rent_full)       # mae: 332.84
 
 
 mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) # in relation to mean price: 18.96%
@@ -270,48 +269,100 @@ ols_results[5,] <- c(5, "OLS", rmse_cv, mae_cv, mae, mae_mean)
 
 
 
+
+
 ###############################################################################*
 ## Random Forests --------------------------------------------------------------
 ###############################################################################*
 set.seed(123)
 ###############################################################################*
 ### RANDOM FOREST - NOTES
-### Don't use randomForest package. It's too slow! Use ranger instead
+### We model some random forests in this section. We begin with a simple "vanilla"
+### random forest with default values from randomForest. We then try some other
+### random forest with a reduction in the amount of features. Once we have an overview
+### on which model performs best (based on oob errors), we get into hyper-
+### parameter tuning for that model
 ###############################################################################*
 
-## Model 1: Selected Variables -------------------------------------------------
 
-# Vars used: area, rooms, arbeitsmarktregionen
-split <- initial_split(
-  Dmod %>%
-    select(rent_full, area, rooms, starts_with("label")),
-  prop = 0.8
-)
+## Model 1: All variables, vanilla attempt -------------------------------------
+
+  # Note: we first try a normal "vanilla" random forest with randomForest
+  # package. It should serve as a general benchmark on what follows
+
+split <- initial_split(Dmod, prop = 0.8) 
 Dmod_train <- analysis(split)
 Dmod_test <- assessment(split)
 
-
-m1 <- ranger(
+  # we use randomForest package as first result to plot oob errors vs. no. trees
+  # Note: randomForest parameters: 
+    # mtry = p/3, sample = nrow(Dmod), ntree = 500, node size = 5
+rf1 <- randomForest(
   formula = rent_full ~ .,
   data    = Dmod_train
 )
-y_hat <- predict(m1, data = Dmod_test)
-MAE(y_hat$predictions, Dmod_test$rent_full) # MAE 250
+
+plot(rf1)                             # plot oob errors vs. no. of trees:
+                                      # after some time mse doesn't improve
+                                      # by much
+
+rf1$mse[which.min(rf1$mse)]           # oob mse with 500 trees: 103206
+                                        
+
+y_hat <- predict(rf1, Dmod_test) 
+MAE(y_hat, Dmod_test$rent_full)       # MAE: 211.77
 
 
-## Model 2: all variables ------------------------------------------------------
 
-# Vars used: area, rooms, 
-split <- initial_split(Dmod)
-m2 <- ranger(
-  formula = rent_full ~ .,
-  data = analysis(split)
+## Model 2: Selected Variables (same variables as ols model 3) -----------------
+
+  # Vars used: area, rooms, general micro rating, arbeitsmarktregionen
+  # Note: we use the ranger package for further models due to its faster
+  # implementation. Parameters remain the same as for the default vanilla 
+  # approach at the beginning
+split <- initial_split(
+  Dmod %>%
+    select(rent_full, area, rooms, micro_rating_new, dplyr::starts_with("label")),
+  prop = 0.8
 )
-y_hat <- predict(m2, data = assessment(split))
-MAE(y_hat$predictions, assessment(split)$rent_full) # lowest MAE with 230
+Dmod_train <- training(split)
+Dmod_test <- testing(split)
 
-which.min(m2$prediction.error)
+rf2 <- ranger(
+  formula       = rent_full ~ .,
+  data          = Dmod_train,
+  mtry          = 33,                # p/3 as in prev. model
+  min.node.size = 5
+)
 
+rf2$prediction.error      # oob mse: 115586
+MAE(predict(rf2, data = Dmod_test)$prediction, Dmod_test$rent_full)
+                          # MAE: 228.40 (better than ols: 256)
+
+
+
+## Model 3: Selected Variables (same variables as ols model 2) -----------------
+
+ # Vars used: area, rooms, furnished (yes/no), balcony (yes/no), micro ratings,
+ # distances to places of interest
+split <- initial_split(
+  Dmod %>%
+    select(rent_full, area, rooms, furnished, balcony, 
+           dplyr::starts_with("micro"), dplyr::starts_with("dist")),
+  prop = 0.8
+)
+Dmod_train <- training(split)
+Dmod_test <- testing(split)
+
+rf3 <- ranger(
+  formula       = rent_full ~ .,
+  data          = Dmod_train,
+  mtry          = 4,                # p/3 as in prev. model
+  min.node.size = 5
+)
+rf3$prediction.error               # oob mse: 157119
+MAE(predict(rf3, data = Dmod_test)$prediction, Dmod_test$rent_full)
+                                   # MAE: 271.66 (better than ols: 332.84)
 
 ###############################################################################*
 ## Hyper-parameter tuning - Random Forest---------------------------------------
@@ -325,44 +376,42 @@ which.min(m2$prediction.error)
 # Only run this section if you want to replicate the results!
 ###############################################################################*
 
-
-# Dmod_train <- analysis(split)
+split <- initial_split(Dmod, prop = 0.8)
+Dmod_train <- analysis(split)
 
 # we start with a hyper-parameter grid as introduced in the lecture
-# hyper_grid <- expand.grid(
-#  mtry       = seq(20, 30, by = 2),
-#  node_size  = seq(3, 9, by = 2),
-#  sampe_size = c(.55, .632, .70, .80),
-#  OOB_RMSE   = 0 # a place to dump results
-#)
+hyper_grid <- expand.grid(
+  mtry       = seq(35, 45, by = 2),
+  node_size  = seq(3, 9, by = 2),
+  sampe_size = c(.55, .632, .70, .80),
+  OOB_RMSE   = 0 # a place to dump results
+)
 
-
-# for(i in 1:nrow(hyper_grid)) {
-#  
-#  
-#  model <- ranger(
-#    formula         = rent_full ~ ., 
-#    data            = Dmod_train, 
-#    num.trees       = 500,
-#    mtry            = hyper_grid$mtry[i],
-#    write.forest    = FALSE,
-#    min.node.size   = hyper_grid$node_size[i],
-#    sample.fraction = hyper_grid$sampe_size[i],
-#    oob.error       = TRUE,
-#    verbose         = TRUE,
-#    seed            = 123
-#  )
+for(i in 1:nrow(hyper_grid)) {
+  
+  
+  model <- ranger(
+    formula         = rent_full ~ ., 
+    data            = Dmod_train, 
+    num.trees       = 500,
+    mtry            = hyper_grid$mtry[i],
+    write.forest    = FALSE,
+    min.node.size   = hyper_grid$node_size[i],
+    sample.fraction = hyper_grid$sampe_size[i],
+    oob.error       = TRUE,
+    verbose         = TRUE,
+    seed            = 123
+)
 
 # add OOB error to grid
-#  hyper_grid$OOB_RMSE[i] <- sqrt(model$prediction.error)
-#}
+hyper_grid$OOB_RMSE[i] <- sqrt(model$prediction.error)
+}
 
 
 # hyper_grid %>% arrange(OOB_RMSE)
 
 # Results (OOB_RMSE) don't wary by much. Nonetheless, here are the top 10 models
-# NOTE: hyper-parameter tuning was run without setting a seed. Results may
-# therefore wary
+
 
 
 #      mtry  node_size  sampe_size    OOB_RMSE
@@ -378,11 +427,29 @@ which.min(m2$prediction.error)
 #10    28         3      0.700        326.3092
 
 
+## Model 3: Model obtained by hyper-parameter tuning ---------------------------
+split <- initial_split(Dmod, prop = 0.8)
+Dmod_train <- training(split)
+Dmod_test <- testing(split)
+
+rf4 <- ranger(
+  formula         = rent_full ~ .,
+  data            = Dmod_train,
+  mtry            = 30,
+  min.node.size   = 3,
+  sample.fraction = 0.8,
+  seed            = 123
+)
+
+rf4$prediction.error                         # oob MSE: 101561.6
+MAE(predict(rf4, data = Dmod_test)$prediction, Dmod_test$rent_full)
+                                             # MAE: 216.43
+
 ###############################################################################*
 ## Boosted Decision Trees ------------------------------------------------------
 ###############################################################################*
 
-
+ 
 ###############################################################################*
 ### BOOSTING - NOTES
 # 
