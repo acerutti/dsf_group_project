@@ -14,6 +14,14 @@ library(rsample)            # data partitions
 library(ranger)             # random forests
 library(randomForest)       # random forest 
 library(janitor)
+                      # packages for boosted trees
+library(gbm)          # basic implementation
+library(xgboost)      # a faster implementation of gbm
+library(caret)        # an aggregator package for performing many machine learning models
+library(h2o)          # a java-based platform
+library(pdp)          # model visualization
+library(ggplot2)      # model visualization
+library(lime)         # model visualization
 
 load("data/rent_listings_raw.RData")
 
@@ -260,4 +268,78 @@ which.min(m2$prediction.error)
 # the variables there are already onehot encoded and everything else is good
 # to go.
 ###############################################################################*
+
+
+
+## BOOSTED TREES --------------------------------------------------------------
+# Data Used is from Dmod
+
+## Model 1: all variables -------------------------------------------------------
+# Create training (70%) and test (30%) 
+# Use set.seed for reproducibility
+
+set.seed(123)
+Dmod_split <- initial_split(Dmod, prop = .7)
+Dmod_train <- training(Dmod_split)
+Dmod_test  <- testing(Dmod_test)
+
+# Training
+start_time <- Sys.time() # for measuring training time - get the start time
+
+gbm.fit <- gbm(
+  formula = rent_full ~ .,
+  distribution = "gaussian",
+  data = Dmod_train,
+  n.trees = 4000,
+  interaction.depth = 1,
+  shrinkage = 0.001,
+  cv.folds = 5,
+  n.cores = NULL, # will use all cores by default
+  verbose = FALSE
+)  
+
+end_time <- Sys.time() # get the end time
+end_time - start_time # calculate the length of the training - appears in the console
+
+# print results
+print(gbm.fit)
+
+# Result for 100 trees: 
+# The best cross-validation iteration was 100. There were 120 predictors of which 1 had non-zero influence.
+
+# Result for 1000 trees: 
+# The best cross-validation iteration was 1000. There were 120 predictors of which 1 had non-zero influence.
+
+# Result for 2000 trees: 
+# The best cross-validation iteration was 2000. There were 120 predictors of which 3 had non-zero influence.
+
+# Result for 4000 trees: 
+# Time difference of 7.881699 mins
+# The best cross-validation iteration was 4000. There were 120 predictors of which 6 had non-zero influence.
+
+# get MSE and compute RMSE
+sqrt(min(gbm.fit$cv.error))
+## With 100 trees: 660.7521 CHF off the real price
+## With 1000 trees: 566.5158 CHF off the real price
+## With 2000 trees: 524.6013
+## With 4000 trees: 484.7614
+
+# plot loss function as a result of n trees added to the ensemble
+gbm.perf(gbm.fit, method = "cv")
+
+
+# Plot which variable had the most influence on the rentprice
+par(mar = c(5, 8, 1, 1))
+summary(
+  gbm.fit, 
+  cBars = 10,
+  method = relative.influence, # also can use permutation.test.gbm
+  las = 2
+)
+
+# Another plot for showing the importance of each variable
+# devtools::install_github("koalaverse/vip")
+
+library(vip)
+vip::vip(gbm.fit)
 
