@@ -84,7 +84,10 @@ D %>% filter(!is.na(area)) %>%
   distinct(rowid, .keep_all = TRUE) %>%
   mutate(word1 = as.double(word1)) %>%
   mutate(score = ifelse(area == word1, 1,0)) %>%
-  summarise(diagnosis = mean(score))
+  mutate(error = as.double(word1)-area) %>%
+  summarise(diagnosis = mean(score), MSE = mean(error*error), MAE = mean(abs(error)))
+
+mean(D$area, na.rm = T)
 
 # this has an accuracy of 74% on the whole dataset, which is pretty good.
 # However, if we view the code above without the last line (we don't run it 
@@ -200,7 +203,8 @@ rooms_diagnosis %>%
   mutate(room_pred = ifelse(is.na(word_a), word1, as.double(word_a) + 0.5)) %>%
   select(rowid, rooms, descr, room_pred) %>%
   mutate(score = ifelse(rooms == room_pred, 1,0)) %>% 
-  summarise(diagnosis = mean(score))
+  mutate(error = room_pred-rooms) %>%
+  summarise(diagnosis = mean(score), MSE = mean(error*error), MAE = mean(abs(error)))
 
 # We have an accuracy of 83%, which is pretty good. If we have a look at how off 
 # the values obtained through tokenization are when the score is 0, we also see that 
