@@ -391,11 +391,11 @@ which.min(m2$prediction.error)
 
 
 ## Model 1: all variables ------------------------------------------------------
-# Create training (70%) and test (30%) 
+# Create training (80%) and test (20%) 
 # Use set.seed for reproducibility
 
 set.seed(123)
-Dmod_split <- initial_split(Dmod, prop = .7)
+Dmod_split <- initial_split(Dmod, prop = .8)
 Dmod_train <- training(Dmod_split)
 Dmod_test  <- testing(Dmod_test)
 
