@@ -296,10 +296,16 @@ improved_data_analyzed[new_home_types$rowid,"home_type"] <- cap(
 )
 
 ### final step ----
+results <- tibble(status= c(rep("original",3), rep("improved",3)),
+                  object= rep(c("rooms","balcony","furnished"),2),
+                  values= c(1, 1, 1,
+                            sum(is.na(improved_data_analyzed$rooms))/sum(is.na(data_analyzed$rooms)), 
+                          (nrow(improved_data_analyzed)-sum(improved_data_analyzed$furnished))/(nrow(data_analyzed)-sum(data_analyzed$furnished)), 
+                          (nrow(improved_data_analyzed)-sum(improved_data_analyzed$balcony))/(nrow(data_analyzed)-sum(data_analyzed$balcony))))
+
+ggplot(data=results, aes(x=object, y=values, fill=status)) +
+  geom_bar(stat="identity", position=position_dodge())
 
 data_analyzed = improved_data_analyzed
-
-
-
 
 
