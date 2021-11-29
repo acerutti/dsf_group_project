@@ -13,11 +13,12 @@ library(caret)              # cross-validation etc.
 library(rsample)            # data partitions
 library(ranger)             # random forests
 library(randomForest)       # random forest 
-library(janitor)
-                      # packages for boosted trees
+library(janitor)            # use for variable name cleaning
+
+
+# packages for boosted trees
 library(gbm)          # basic implementation
 library(xgboost)      # a faster implementation of gbm
-library(caret)        # an aggregator package for performing many machine learning models
 library(h2o)          # a java-based platform
 library(pdp)          # model visualization
 library(ggplot2)      # model visualization
@@ -56,11 +57,15 @@ Dmod <- data_analyzed %>%
   select(-c("Label", "home_type")) %>%
   drop_na() %>%
   clean_names() # makes titles clean 
-                # (capitals become lower-case, brackets deleted, etc.) 
-                # (e.g. Wil (SG) becomes wil_sg)
+# (capitals become lower-case, brackets deleted, etc.) 
+# (e.g. Wil (SG) becomes wil_sg)
 
 # Set up data frame where we can push all results of all models to
-model_results <- data.frame(NULL)
+model_results <- data.frame(matrix(ncol = 6, nrow = 15))
+names(model_results) <- c("model_nr", "model_type", "rmse_cv", "mae_cv", "mae", "mae/mean")
+
+
+
 
 
 ###############################################################################*
@@ -70,101 +75,211 @@ model_results <- data.frame(NULL)
 ###############################################################################*
 #
 ### OLS - Notes
-# Explain all models
-# 
-# TO DO
-# make models with polynomials
-# run cv errors for all
+# General approach: we model different OLS with different specified variables
+# we check the errors (mse and mae) of models through cross-validation and a
+# validation set approach
 ###############################################################################*
+set.seed(123)
+
 
 
 ## Model 1: all variables ------------------------------------------------------
-split <- initial_split(Dmod, prop = 0.8)             # split into training/test
 
-ols_all <- lm(rent_full ~ ., data = training(split))
-summary(ols_all)
+# Vars used: area, rooms, apartment types, furnished (yes/no), micro ratings,
+# balcony (yes/no), distances to places of interest, arbeitsmarktregionen
 
-y_hat <- predict(ols_all, newdata = testing(split))
-MAE(y_hat, testing(split)$rent_full) # 249
+# split into training/test
+split <- initial_split(Dmod, prop = 0.8)             
 
-
-MAE(y_hat, testing(split)$rent_full)/mean(Dmod$rent_full) # in relation to mean price
+# cross-validation split
+data_ctrl <- trainControl(method = "cv", number = 10) 
 
 # cross-validation
-data_ctrl <- trainControl(method = "cv", number = 5) 
-ols_all_cv <- train(rent_full ~ .,                    # model to fit
-                     data = Dmod,                        
-                     trControl = data_ctrl,           # folds
-                     method = "lm",                   # specifying regression model
-                     na.action = na.pass)      
-summary(ols_all_cv)
-ols_all_cv$results # results not that incredible. mae is still around 250
+ols_1_cv <- train(rent_full ~ .,                    # model to fit
+                  data = training(split),                        
+                  trControl = data_ctrl,           # folds
+                  method = "lm",                   # specifying regression model
+                  na.action = na.pass)      
+rmse_cv <- ols_1_cv$results[["RMSE"]]               # rmse_cv: 363.41
+mae_cv <- ols_1_cv$results[["MAE"]]                 # mae_cv: 249.93
+
+# normal model
+ols_1 <- lm(rent_full ~ ., data = training(split))
 
 
-## Model 2: selected variables with cross validation -------------------------------------------------
+# error (validation set approach)
+y_hat <- predict(ols_1, newdata = testing(split))
+mae <- MAE(y_hat, testing(split)$rent_full)          # mae: 244.78
 
-# selection of only some variables to prevent overfitting
+
+mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) # in relation to mean price: 13.97%
+
+model_results[1,] <- c(1, "OLS", rmse_cv, mae_cv, mae, mae_mean)
+
+
+## Model 2: selected variables with cross validation ---------------------------
+
+# Vars used: area, rooms, furnished (yes/no), balcony (yes/no), micro ratings,
+# distances to places of interest
+
 split <- initial_split(
   Dmod %>% 
     select(all_of(setdiff(modelling_vars, c("home_type", "Label"))), 
            micro_rating_new, 
            dplyr::starts_with("dist")
-           ),
+    ),
   prop = 0.8)
 
-ols_sel <- lm(rent_full ~ ., data = training(split))
-MAE(predict(ols_sel, newdata = testing(split)), testing(split)$rent_full) 
-# yields worse results of 330
+# cross-validation split
+data_ctrl <- trainControl(method = "cv", number = 10) 
+
+# cross-validation
+ols_2_cv <- train(rent_full ~ .,                    # model to fit
+                  data = training(split),                        
+                  trControl = data_ctrl,           # folds
+                  method = "lm",                   # specifying regression model
+                  na.action = na.pass)      
+rmse_cv <- ols_2_cv$results[["RMSE"]]               # rmse_cv: 478.05
+mae_cv <- ols_2_cv$results[["MAE"]]                 # mae_cv: 333.65
+
+# normal model
+ols_2 <- lm(rent_full ~ ., data = training(split))
+
+# error (validation set approach)
+y_hat <- predict(ols_2, newdata = testing(split))
+mae <- MAE(y_hat, testing(split)$rent_full)
 
 
+mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) # in relation to mean price: 18.96%
+
+model_results[2,] <- c(2, "OLS", rmse_cv, mae_cv, mae, mae_mean)
 
 ## Model 3: "very simple" ------------------------------------------------------
+
+# Vars used: area, rooms, general micro rating, arbeitsmarktregionen
+
 split <- initial_split(
   Dmod %>%
     select(rent_full, area, rooms, micro_rating_new, starts_with("label"))
 )
-ols_simple <- lm(rent_full ~ ., data = training(split))
-MAE(predict(ols_simple, newdata = testing(split)), testing(split)$rent_full)
 
-# yields results of 257
-# the most simple model which only controls for area, rooms, micro rating, and
-# location in amr yields equally good results as the model with all components
+# cross-validation split
+data_ctrl <- trainControl(method = "cv", number = 10) 
+
+# cross-validation
+ols_3_cv <- train(rent_full ~ .,                    # model to fit
+                  data = training(split),                        
+                  trControl = data_ctrl,           # folds
+                  method = "lm",                   # specifying regression model
+                  na.action = na.pass)      
+rmse_cv <- ols_3_cv$results[["RMSE"]]               # rmse_cv: 371.89
+mae_cv <- ols_3_cv$results[["MAE"]]                 # mae_cv: 256.60
+
+# normal model
+ols_3 <- lm(rent_full ~ ., data = training(split))
+
+# error (validation set approach)
+y_hat <- predict(ols_3, newdata = testing(split))
+mae <- MAE(y_hat, testing(split)$rent_full)         # mae: 256.72
 
 
+mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) # in relation to mean price: 14.69%
 
-## Model 4: "no micro rating" --------------------------------------------------
+model_results[3,] <- c(3, "OLS", rmse_cv, mae_cv, mae, mae_mean)
+
+
+## Model 4: "squared variables" ------------------------------------------------
+
+# Vars used: area, area squared, rooms, rooms squared, apartment types, 
+# furnished (yes/no), micro ratings,
+# balcony (yes/no), distances to places of interest, arbeitsmarktregionen
+
 split <- initial_split(
   Dmod %>%
-    select(rent_full, area, rooms, starts_with("label"))
+    mutate(area_sq = area^2) %>%
+    mutate(rooms_sq = rooms^2)
 )
-ols_simple <- lm(rent_full ~ ., data = training(split))
-MAE(predict(ols_simple, newdata = testing(split)), testing(split)$rent_full)
 
-# similar results but a bit less precise
+# cross-validation split
+data_ctrl <- trainControl(method = "cv", number = 10) 
 
-## Model 5: "all variables including cantons, etc." ----------------------------
+# cross-validation
+ols_4_cv <- train(rent_full ~ .,                    # model to fit
+                  data = training(split),                        
+                  trControl = data_ctrl,           # folds
+                  method = "lm",                   # specifying regression model
+                  na.action = na.pass)      
+rmse_cv <- ols_4_cv$results[["RMSE"]]               # rmse_cv: 362.21
+mae_cv <- ols_4_cv$results[["MAE"]]                 # mae_cv: 249.33
+
+# normal model
+ols_4 <- lm(rent_full ~ ., data = training(split))
+
+# error (validation set approach)
+y_hat <- predict(ols_4, newdata = testing(split))
+mae <- MAE(y_hat, testing(split)$rent_full)         # mae: 248.32
+
+
+mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) # in relation to mean price: 14.12%
+
+model_results[4,] <- c(4, "OLS", rmse_cv, mae_cv, mae, mae_mean)
+
+
+
+## Model 5: all variables including cantons, etc" ------------------------------
+
+# Vars used: area, rooms, apartment types, furnished (yes/no), micro ratings,
+# balcony (yes/no), distances to places of interest, arbeitsmarktregionen,
+# cantons, arbeitsmarktgrossregionen
+
 split <- initial_split(
   data_analyzed %>%
-    select(all_of(modelling_vars), dplyr::starts_with("dist"),dplyr::starts_with("Micro"), KTKZ, Arbeitsmarktgrossregionen.2018) %>%
+    select(all_of(modelling_vars), 
+           dplyr::starts_with("dist"),
+           dplyr::starts_with("Micro"), 
+           KTKZ, 
+           Arbeitsmarktgrossregionen.2018) %>%
     drop_na()
 )
 
-mod_all <- lm(rent_full ~ ., data = analysis(split))
-MAE(predict(mod_all, newdata = testing(split)), testing(split)$rent_full)
-## doesn't help a lot, worries about overfitting
+# cross-validation split
+data_ctrl <- trainControl(method = "cv", number = 10) 
+
+# cross-validation
+ols_5_cv <- train(rent_full ~ .,                    # model to fit
+                  data = training(split),                        
+                  trControl = data_ctrl,           # folds
+                  method = "lm",                   # specifying regression model
+                  na.action = na.pass)      
+rmse_cv <- ols_5_cv$results[["RMSE"]]               # rmse_cv: 357.00
+mae_cv <- ols_5_cv$results[["MAE"]]                 # mae_cv: 245.58
+
+# normal model
+ols_5 <- lm(rent_full ~ ., data = training(split))
+
+# error (validation set approach)
+y_hat <- predict(ols_5, newdata = testing(split))
+mae <- MAE(y_hat, testing(split)$rent_full)         # mae: 249.74
+
+
+mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) # in relation to mean price
+
+model_results[5,] <- c(5, "OLS", rmse_cv, mae_cv, mae, mae_mean)
 
 
 
 ###############################################################################*
 ## Random Forests --------------------------------------------------------------
 ###############################################################################*
-
+set.seed(123)
 ###############################################################################*
 ### RANDOM FOREST - NOTES
 ### Don't use randomForest package. It's too slow! Use ranger instead
 ###############################################################################*
 
-## Model 1: Selected Variables as shown ----------------------------------------
+## Model 1: Selected Variables -------------------------------------------------
+
+# Vars used: area, rooms, arbeitsmarktregionen
 split <- initial_split(
   Dmod %>%
     select(rent_full, area, rooms, starts_with("label")),
@@ -183,6 +298,8 @@ MAE(y_hat$predictions, Dmod_test$rent_full) # MAE 250
 
 
 ## Model 2: all variables ------------------------------------------------------
+
+# Vars used: area, rooms, 
 split <- initial_split(Dmod)
 m2 <- ranger(
   formula = rent_full ~ .,
@@ -233,27 +350,30 @@ which.min(m2$prediction.error)
 #    verbose         = TRUE,
 #    seed            = 123
 #  )
-  
-  # add OOB error to grid
+
+# add OOB error to grid
 #  hyper_grid$OOB_RMSE[i] <- sqrt(model$prediction.error)
 #}
 
 
 # hyper_grid %>% arrange(OOB_RMSE)
 
-# results (OOB_RMSE) don't wary by much. Nonetheless, here are the top 10 models
+# Results (OOB_RMSE) don't wary by much. Nonetheless, here are the top 10 models
+# NOTE: hyper-parameter tuning was run without setting a seed. Results may
+# therefore wary
 
-#      mtry  node_size  sampe_size OOB_RMSE
-#1     30         3      0.800   324.0606
-#2     30         5      0.800   324.7636
-#3     26         3      0.800   325.0434
-#4     28         3      0.800   325.1838
-#5     28         5      0.800   325.5639
-#6     30         7      0.800   325.7180
-#7     26         5      0.800   325.7482
-#8     30         3      0.700   326.0298
-#9     24         3      0.800   326.2729
-#10    28         3      0.700   326.3092
+
+#      mtry  node_size  sampe_size    OOB_RMSE
+#1     30         3      0.800        324.0606
+#2     30         5      0.800        324.7636
+#3     26         3      0.800        325.0434
+#4     28         3      0.800        325.1838
+#5     28         5      0.800        325.5639
+#6     30         7      0.800        325.7180
+#7     26         5      0.800        325.7482
+#8     30         3      0.700        326.0298
+#9     24         3      0.800        326.2729
+#10    28         3      0.700        326.3092
 
 
 ###############################################################################*
@@ -264,17 +384,13 @@ which.min(m2$prediction.error)
 ###############################################################################*
 ### BOOSTING - NOTES
 # 
-# Hi Alessandra :), please use the Dmod dataset if you model any boosted trees
-# the variables there are already onehot encoded and everything else is good
-# to go.
+# Data Dmod used for modelling
+# 
+# 
 ###############################################################################*
 
 
-
-## BOOSTED TREES --------------------------------------------------------------
-# Data Used is from Dmod
-
-## Model 1: all variables -------------------------------------------------------
+## Model 1: all variables ------------------------------------------------------
 # Create training (70%) and test (30%) 
 # Use set.seed for reproducibility
 
