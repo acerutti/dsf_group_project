@@ -10,6 +10,15 @@
 # Jason Rosenthal
 ################################################################################
 
+### Preparatory Steps
+
+rm(list = ls())
+
+# Load all packages needed for this project:
+
+
+
+
 ### Data Import-----
 
 
@@ -24,4 +33,4 @@
 ### Data Analysis----
 
 
-# Modelling----
+### Modelling----
