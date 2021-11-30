@@ -380,7 +380,7 @@ furnished_appartments <- bigrams %>%
 
 improved_data_analyzed[unique(furnished_appartments$rowid),"furnished"] <- 1
 
-### balcony ----
+### balcony --------------------------------------------------------------------
 
 balcony_words <- c("balcon", "balkon", "balcone", "balcony")
 
@@ -394,7 +394,7 @@ balcony_appartments <- bigrams %>%
 
 improved_data_analyzed[balcony_appartments$rowid,"balcony"] <- 1 # 8086 obs
 
-### home_type ----
+### home_type ------------------------------------------------------------------
 
 home_type_words = c("wohnung","attika","dachwohnung","terrassenwohnung","maisonette",      
                     "studio","loft","ferienwohnung", "attique", "soffitta", "attico","sottotetto", "duplex")
@@ -420,16 +420,16 @@ cap <- function(x) {
 }
 
 improved_data_analyzed[new_home_types$rowid,"home_type"] <- cap(
-  ifelse(new_home_types$home_type %in% c("wohnung","attika","dachwohnung","terrassenwohnung",
+  ifelse(new_home_types$word %in% c("wohnung","attika","dachwohnung","terrassenwohnung",
                                          "maisonette","studio","loft","ferienwohnung"),
-         new_home_types$home_type,
+         new_home_types$word,
          
          # If the home_type is in the original names we have, we assign those.
          
-         ifelse(home_type %in% c("attique", "soffitta", "attico","sottotetto"), "attika", "maisonette"))
+         ifelse(word %in% c("attique", "soffitta", "attico","sottotetto"), "attika", "maisonette"))
 )
 
-### final step ----*
+### final steps ----------------------------------------------------------------
 
 # In this nice plot we show you how many new observations we found which improved
 # our data set 
@@ -437,8 +437,8 @@ results <- tibble(values = c(nrow(balcony_appartments), nrow(furnished_appartmen
                              nrow(new_rooms), nrow(new_home_types)), object = c("balcony", "furnished", "rooms", "home type"))
 
 ggplot(data=results, aes(x=object, y=values)) +
-  geom_bar(stat="identity", position=position_dodge())
-
+  geom_bar(stat="identity") +
+  theme_bw()
 
 
 # Quick dimensions check
@@ -448,11 +448,16 @@ dim(data_analyzed)
 dim(improved_data_analyzed)
 
 # We overwrite the data_analyzed by the now improved data set (improved_data_analyzed)
+
 data_analyzed = improved_data_analyzed
 
+# We might be interested in filtering out Ferienwohnungen as they might not be
+# rented out for a full month 
 
+# There are 3 of them, and they are not captured by tokenisation but were originally in
+# data_analyzed
 
-
+data_analyzed_ferien <- data_analyzed %>% filter(home_type != "Ferienwohnung") 
 
 
 ### DATA ANALYSIS--------------------------------------------------------------
