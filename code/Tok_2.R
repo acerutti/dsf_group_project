@@ -304,7 +304,8 @@ results <- tibble(values = c(nrow(balcony_appartments), nrow(furnished_appartmen
                   nrow(new_rooms), nrow(new_home_types)), object = c("balcony", "furnished", "rooms", "home type"))
 
 ggplot(data=results, aes(x=object, y=values)) +
-  geom_bar(stat="identity", position=position_dodge())
+  geom_bar(stat="identity", position=position_dodge()) +
+  theme_bw()
 
 data_analyzed = improved_data_analyzed
 
