@@ -1,4 +1,4 @@
-################################################################################
+###############################################################################*
 #
 # Data Science Fundamentals Group Project
 # Fall 2021
@@ -8,19 +8,20 @@
 # Alessandra Elivia Eugenia Cerutti
 # Amelie Carla Hoa Madrona
 # Jason Rosenthal
-################################################################################
+#
+###############################################################################*
 
 ### Preparatory Steps
 
 rm(list = ls())
 
-# Load all packages needed for this project
+# Loading all packages needed for this project
 
-# cleaning
+# Cleaning
 
 library(xlsx)
 
-# tokenization
+# Tokenization
 
 library(tidytext)
 library(tidyverse)
@@ -28,9 +29,12 @@ library(textdata)
 library(tidyr)
 library(dplyr)
 
-# for summary statistics
+# Summary statistics
+
 library(vtable) 
 library(qwraps2)
+
+# OLS
 
 library(caret)              # cross-validation etc.
 library(rsample)            # data partitions
@@ -38,7 +42,8 @@ library(ranger)             # random forests
 library(randomForest)       # random forest 
 library(janitor)            # use for variable name cleaning
 
-# packages for boosted trees
+# Boosted trees
+
 library(gbm)          # basic implementation
 library(xgboost)      # a faster implementation of gbm
 library(h2o)          # a java-based platform
@@ -47,19 +52,16 @@ library(lime)         # model visualization
 
 
 
-### Set working directory
-
-
+### Please set your working directory to our group project folder!
 
 ### DATA CLEANING --------------------------------------------------------------
 
 
 load("rent_listings_raw.RData")
 
-## Variable Selection ---------------------------------------------------------*
+## Variable Selection ----------------------------------------------------------
 
-# We first check which variables do not contain any data. I filtered out any 
-# variables which had roughly more than 50% NAs
+# We first check which variables do not contain any data. 
 
 # NAs per variable
 lapply(D, function(x) table(is.na(x)))
@@ -67,8 +69,8 @@ lapply(D, function(x) table(is.na(x)))
 # preliminary selection of important variables
 keep_for_now <- c("rent_full", "area", "home_type", "GDENAMK", "GDENR", "KTKZ", "zipcode", 
                   "GKODE", "GKODN", "PLZNAME", "descr", "floors", "furnished", 
-                  "lat", "lon", "date","month", "quarter_general", # furnished kept for tokenization
-                  "msregion", "rooms",  "year_built", "newly_built", "balcony", # check if newly_built is year_built == 2019
+                  "lat", "lon", "date","month", "quarter_general",
+                  "msregion", "rooms",  "year_built", "newly_built", "balcony", 
                   "Micro_rating_new", "Micro_rating_NoiseAndEmission_new", 
                   "Micro_rating_Accessibility_new", "Micro_rating_DistrictAndArea_new", 
                   "Micro_rating_SunAndView_new", "Micro_rating_ServicesAndNature_new",
@@ -85,17 +87,13 @@ keep_for_now <- c("rent_full", "area", "home_type", "GDENAMK", "GDENR", "KTKZ", 
 # cabletv: keep until clear what it is
 # does floors mean on which floor it is?
 # what does msregion mean? MSRegion are defined regions by the BFS. Each region
-# is homogenous. https://www.bfs.admin.ch/bfs/de/home/statistiken/raum-umwelt/nomenklaturen/msreg.assetdetail.415729.html
+# is homogeneous. https://www.bfs.admin.ch/bfs/de/home/statistiken/raum-umwelt/nomenklaturen/msreg.assetdetail.415729.html
 
 # newly_built might have the same problem as the apartment features - if it's 
 #         not specified it's not got a 1
 # check if zipcode is PLZ4! They are the same!
 # which(na.omit(D)$zipcode != na.omit(D)$PLZ4)
 # the two columns with wgh_avg_... are identical - only keep one
-
-
-# do avg values correspond to gemeinde? (e.g. anteil_efh, avg_size_household)
-# dist_to_main_stat?
 #
 ###############################################################################*
 
@@ -125,7 +123,7 @@ amr_names$Code <- as.double(amr_names$Code)
 legend <- legend %>%
   left_join(amr_names, by = c("Arbeitsmarktregionen.2018" = "Code"))
 
-# Calculate quantiles for the accpetance ranges
+# Calculate quartiles for the acceptance ranges
 ms_quantiles <- D %>% 
   filter(!is.na(area)) %>%
   filter(area >= 25) %>%
@@ -152,13 +150,13 @@ data_analyzed <- D %>%
 data_analyzed[,c("balcony", "furnished")] = apply(data_analyzed[,c("balcony", "furnished")], 2, function(x) replace_na(x,0))
 
 
-### TOKENIZATION---------------------------------------------------------------
-
-### D "area" ----*
+### TOKENIZATION----------------------------------------------------------------
 
 # In this section, we want to improve our data sets by looking if we can find values
 # in the appartment description (variable "descr") that were not captured in their
 # respective column. The interesting variables are: "area", "rooms", "furnished", "balcony" and "home_type".
+
+### working on D ---------------------------------------------------------------
 
 # We start with the uncleaned data set D, to see if we can catch some "areas".
 # It is necessary to work on D because, in the cleaning, we removed observations
@@ -210,7 +208,7 @@ area_bigrams <- D %>% filter(is.na(area) == T) %>%
 # performs to detect areas on the data for which we have "area" entries.
 
 
-### Diagnosis of "area" ---------
+### Diagnosis of "area" -------------------------------------------------------*
 
 D %>% filter(!is.na(area)) %>%
   select(rowid, descr, area) %>%
@@ -223,45 +221,41 @@ D %>% filter(!is.na(area)) %>%
   mutate(word1 = as.double(word1)) %>%
   mutate(score = ifelse(area == word1, 1,0)) %>%
   mutate(error = as.double(word1)-area) %>%
-  summarise(diagnosis = mean(score), MSE = mean(error*error), MAE = mean(abs(error)))
+  summarise(diagnosis = mean(score), MAE = mean(abs(error)), MAEm = MAE/mean(D$area, na.rm = T))
 
-mean(D$area, na.rm = T)
-
-# this has an accuracy of 74% on the whole dataset, which is pretty good.
-# However, if we view the code above without the last line (we don't run it 
-# because it takes quite some time), we see for example that the observation 
-# with rowid = 332 detects an area of 54 m2 instead of 102 m2 because they mention 
-# several rooms and their respective area but not the total/ not the total area 
-# first. This might be something happening quite frequently and 
-# there is a risk that our miscaptured "areas" deviate largely from 
-# the reality. This would pollute our dataset more than actually improving it. 
+# This has an accuracy of 74% on the whole dataset, and a MAE of 12.9 m2 (put in 
+# relation with the mean area: 16%). This is rather good, but we decided that 
+# the trade-off between possibly including incorrect areas with large deviations and 
+# obtaining 520 more observations (out of 77851) was not worth it.
 
 # So we are not going to use tokenisation to improve the "areas" in D.
 
 # We now move on to improving our cleaned data set, data_analyzed.
 
-# Preparatory steps to improve data_analysed -----
+# Working on data_analyzed -----------------------------------------------------
 
-# D_tok is the dataset which is "tokenizable" because it contains descriptions 
+### Preparatory steps
 
-D_tok = data_analyzed %>% 
+# d_tok is the dataset which is "tokenizable" because it contains descriptions 
+
+d_tok = data_analyzed %>% 
   filter(is.na(descr)==F) %>% 
   select(rowid,descr,furnished,rooms,balcony, home_type)
 
 # simple tokenization 
 
-tok <- D_tok %>% unnest_tokens(word, descr, token = "words") 
+tok <- d_tok %>% unnest_tokens(word, descr, token = "words") 
 
 # tokenizing bigrams
 
-bigrams <- D_tok %>% 
+bigrams <- d_tok %>% 
   unnest_tokens(bigram, descr, token = "ngrams", n = 2, drop = F)
 
 # working on improved_data_analyzed to be safe
 
 improved_data_analyzed = data_analyzed
 
-### improving "rooms" ----
+### rooms ----------------------------------------------------------------------
 
 # We create a vector containing possible number of rooms. We've noticed some 
 # descriptions use commas, other use dots.
@@ -290,7 +284,7 @@ new_rooms <- bigrams %>%
 # Dealing with the 1/2 (appearing as 1 2), which was wrongly caught by the bigrams: 
 # we would have for example "5 1/2 zimmer" captured as 2 zimmer
 
-trigrams <- D_tok %>% 
+trigrams <- d_tok %>% 
   filter(is.na(rooms) == T) %>%
   unnest_tokens(trigram, descr, token = "ngrams", n = 3, drop = F) %>% 
   separate(trigram, c("word1", "word2", "word3"), sep = " ") %>%
@@ -306,7 +300,7 @@ trigrams <- D_tok %>%
 # 55 observations is not so significant but this is important because without this 
 # step, the 2 rooms category would be quite polluted
 
-# Diagnosis of "rooms" -----
+# Diagnosis of "rooms" --------------------------------------------------------*
 
 # Before assigning the values captured through tokenization, we want to check
 # if the method we use is convincing.
@@ -325,7 +319,7 @@ rooms_diagnosis <- bigrams %>%
 
 # We correct the 1/2 like previously
 
-trigrams_diagnosis <- D_tok %>% 
+trigrams_diagnosis <- d_tok %>% 
   filter(is.na(rooms) == F) %>%
   unnest_tokens(trigram, descr, token = "ngrams", n = 3, drop = F) %>% 
   separate(trigram, c("word_a", "word_b", "word_c"), sep = " ") %>%
@@ -342,14 +336,12 @@ rooms_diagnosis %>%
   select(rowid, rooms, descr, room_pred) %>%
   mutate(score = ifelse(rooms == room_pred, 1,0)) %>% 
   mutate(error = room_pred-rooms) %>%
-  summarise(diagnosis = mean(score), MSE = mean(error*error), MAE = mean(abs(error)))
+  summarise(diagnosis = mean(score), MAE = mean(abs(error)), MAEm = MAE/mean(data_analyzed$rooms, na.rm = T))
 
-# We have an accuracy of 83%, which is pretty good. If we have a look at how off 
-# the values obtained through tokenization are when the score is 0, we also see that 
-# it is not too off: if we run everything except the last line and view, we can look at 
-# rowid = 24, the prediction is 4.5 instead of 4. And for some of them (including rowid 
-# = 24), what we capture through tokenisation is actually accurate and what is in "area" 
-# does not correspond to their description!
+# We have an accuracy of 83% and a MAE of 0.153 rooms (put in relation to the mean 
+# number of rooms, 4.5%), which is pretty good. Interestingly, for some of them 
+# (i.e. rowid = 24), what we capture through tokenisation is correct whereas what
+# is entered in the column "rooms" is incorrect. 
 
 # We now assign the "rooms" their values where there were NAs in the dataset:
 
@@ -360,7 +352,7 @@ improved_data_analyzed[trigrams$rowid,"rooms"] <- as.double(trigrams$word1) + 0.
 # clean dataset to directly assign the captured value in the right row of the 
 # column we're dealing with.
 
-### furnished ----
+### furnished ------------------------------------------------------------------
 
 furnished_words <- c("furnished", "furniture",
                      "meublé", "meubles", "meuble", "meublées", "meublée", "mobilier",
