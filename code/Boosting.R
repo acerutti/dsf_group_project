@@ -57,7 +57,8 @@ Dmod <- data_analyzed %>%
 # Set up data frame where we can push all results of all models to
 boosting_results <- data.frame(matrix(ncol = 10, nrow = 20))
 names(boosting_results) <- c( "model",  "n.trees", "interaction.depth", "shrinkage",
-                             "cv.folds", "training_time", "rmse_cv", "mae_cv", "mae", "mae/mean")
+                             "cv.folds", "min_training_time", "rmse_training", 
+                             "rmse_prediction", "mae_prediction", "mae_pred_mean")
 
 
 
@@ -83,9 +84,9 @@ Dmod_test  <- testing(Dmod_split)
 # Setting the parameters
 # Change here the variable for the training
 model_type <- "gbm"
-n.trees <- 1600
-interaction.depth <- 3 #maximum depth of variable interactions
-shrinkage <- 0.01 #similar as learning rate
+n.trees <- 800
+interaction.depth <- 5 #maximum depth of variable interactions
+shrinkage <- 0.1 #similar as learning rate
 cv.folds <-  10 # cross validation
 
 # for measuring training time - get the start time
@@ -114,7 +115,10 @@ training_time <- difftime(end_time, start_time, units = "mins") #save the traini
 print(gbm.fit)
 
 # get MSE and compute RMSE
-sqrt(min(gbm.fit$cv.error))
+rmse_training <- sqrt(min(gbm.fit$cv.error))
+
+# MAE
+mae_training <- 0
 
 
 ## Predicting ------------------------------------------------------------------
@@ -124,27 +128,26 @@ pred <- predict(gbm.fit, n.trees = gbm.fit$n.trees, Dmod_test)
 
 
 ## Assessing Performance of the model ------------------------------------------
-# RMSE_CV
-rmse_cv <- caret::RMSE(pred, Dmod_test$rent_full)
+# RMSE
+rmse_prediction <- caret::RMSE(pred, Dmod_test$rent_full)
 
-# MAE_CV
-mae_cv <- caret::MAE(pred, Dmod_test$rent_full)
+# mae_prediction
+mae_prediction <- caret::MAE(pred, Dmod_test$rent_full)
 
-# MAE 
-# always to zero because we have cross validatation
-mae <- 0
 
 # MAE/MEAN
-mae_cv_mean <- caret::MAE(pred, Dmod_test$rent_full)/mean(Dmod_test$rent_full)
+mae_pred_mean <- caret::MAE(pred, Dmod_test$rent_full)/mean(Dmod_test$rent_full)
 
 
-##Save the results after each iteration to table  --------------------------------
+##Save the results after each iteration to table  ------------------------------
 ## Always change the number of the row when saving the results of a new set of parameters 
 # and the training. At the moment it is comment out becuase we set the best parameters already
 # at the beginning. 
 
-# boosting_results[10, ] <- c(model_type, n.trees, interaction.depth, shrinkage, 
-                              #cv.folds, training_time, rmse_cv, mae_cv, mae, mae_cv_mean)
+#boosting_results[1, ] <- c(model_type, n.trees, interaction.depth, shrinkage, 
+                          cv.folds, training_time, rmse_training, rmse_prediction,
+                          mae_prediction, mae_pred_mean)
+
 
 # Omit all the rows that are not filled 
 # boosting_results <- na.omit(boosting_results)
