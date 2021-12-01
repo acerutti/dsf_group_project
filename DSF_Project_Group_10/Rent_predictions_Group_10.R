@@ -20,17 +20,14 @@ rm(list = ls())
 # Cleaning
 
 library(xlsx)
+library(tidyverse)
 
 # Tokenization
 
 library(tidytext)
-library(tidyverse)
 library(textdata)
-library(tidyr)
-library(dplyr)
 
 # Summary statistics
-
 library(vtable) 
 library(qwraps2)
 
@@ -48,7 +45,7 @@ library(gbm)          # basic implementation
 library(xgboost)      # a faster implementation of gbm
 library(h2o)          # a java-based platform
 library(pdp)          # model visualization
-library(lime)         # model visualization
+library(vip)          # devtools::install_github("koalaverse/vip")
 
 
 
@@ -66,7 +63,7 @@ load("rent_listings.RData")
 lapply(D, function(x) table(is.na(x)))
 
 # preliminary selection of important variables
-keep_for_now <- c("rent_full", "area", "home_type", "GDENAMK", "GDENR", "KTKZ", "zipcode", 
+relevant_variables <- c("rent_full", "area", "home_type", "GDENAMK", "GDENR", "KTKZ", "zipcode", 
                   "GKODE", "GKODN", "PLZNAME", "descr", "floors", "furnished", 
                   "lat", "lon", "date","month", "quarter_general",
                   "msregion", "rooms",  "year_built", "newly_built", "balcony", 
@@ -135,7 +132,7 @@ legend <- legend %>%
 ms_quantiles <- D %>% 
   filter(!is.na(area)) %>%
   filter(area >= 25) %>%
-  select(all_of(keep_for_now)) %>%
+  select(all_of(relevant_variables)) %>%
   mutate("rent_m2" = rent_full/area) %>%
   left_join(legend, by = c("msregion" = "MS.Regionen", "GDENR" = "BFS.Gde.nummer")) %>%
   group_by(Arbeitsmarktregionen.2018) %>%
@@ -145,7 +142,7 @@ ms_quantiles <- D %>%
 data_analyzed <- D %>%
   filter(!is.na(area)) %>%
   filter(area >= 25) %>%
-  select(all_of(keep_for_now)) %>%
+  select(all_of(relevant_variables)) %>%
   left_join(legend, by = c("msregion" = "MS.Regionen", "GDENR" = "BFS.Gde.nummer")) %>%
   mutate("rent_m2" = rent_full/area) %>%
   left_join(ms_quantiles, by = c("Arbeitsmarktregionen.2018" = "Arbeitsmarktregionen.2018")) %>%
@@ -156,6 +153,9 @@ data_analyzed <- D %>%
 
 
 data_analyzed[,c("balcony", "furnished")] = apply(data_analyzed[,c("balcony", "furnished")], 2, function(x) replace_na(x,0))
+
+# remove all intermediate objects
+rm(list = setdiff(ls(), c("D", "data_analyzed", "problems")))
 
 
 ### TOKENIZATION----------------------------------------------------------------
@@ -290,7 +290,7 @@ new_rooms <- bigrams %>%
 
 # Note that rowid here does not correspond to rowid made on D previously
 
-# Here, we catch 474 observations.
+# Here, we catch 474 observations which had an NA value in the variable rooms.
 
 # Dealing with the 1/2 (appearing as 1 2), which was wrongly caught by the bigrams: 
 # we would have for example "5 1/2 zimmer" captured as 2 zimmer
@@ -488,8 +488,12 @@ improved_data_analyzed = improved_data_analyzed %>%
 results <- tibble(values = c(nrow(balcony_appartments), nrow(furnished_appartments),
                              nrow(new_rooms), nrow(new_home_types)), object = c("balcony", "furnished", "rooms", "home type"))
 
+# Plot to visualize results
 ggplot(data=results, aes(x=object, y=values)) +
   geom_bar(stat="identity") +
+  labs(title = "New observations obtained through text analysis", 
+       y = "Number of observations",
+       x = "Apartment features") +
   theme_bw()
 
 
@@ -506,16 +510,18 @@ data_analyzed = improved_data_analyzed
 # We might be interested in filtering out Ferienwohnungen as they might not be
 # rented out for a full month and thus the rent price/ m2 might be distorted
 
-data_analyzed_ferien <- data_analyzed %>% filter(home_type != "Ferienwohnung") 
+data_analyzed <- data_analyzed %>% filter(home_type != "Ferienwohnung") 
+
+# remove intermediate objects
+rm(list = setdiff(ls(), c("D", "data_analyzed", "problems")))
+
 
 ### DATA ANALYSIS--------------------------------------------------------------
 
 ###### Summary statistics ----------------------------------------------------*
 
 
-# data_analyzed_for_summmary_statistics = data_analyzed %>% select(, c(2,3,5,7,13,20:36))
-
-data_analyzed_for_summmary_statistics = data_analyzed %>% select(, c(2,3,5,7,20:24))
+data_analyzed_for_summmary_statistics = data_analyzed %>% select(c(2,3,5,7,20:24))
 
 st(data_analyzed_for_summmary_statistics) # whole data set
 
@@ -754,9 +760,11 @@ ggplot(data_analyzed, aes(x = rooms, y = area, col = home_type)) +
   geom_smooth(method = "lm", col = "red") +
   labs(title ="Flat size (area) depending on number of rooms",
        x = "Number of rooms",
-       y = "Flat size (area)")
+       y = "Flat size (area)") +
+  theme_bw()
 
-
+# delete intermediate objects
+rm(list = setdiff(ls(), c("D", "data_analyzed", "problems")))
 
 
 ### MODELLING-------------------------------------------------------------------
