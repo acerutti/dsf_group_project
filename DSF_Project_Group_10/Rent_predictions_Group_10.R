@@ -56,8 +56,7 @@ library(lime)         # model visualization
 
 ### DATA CLEANING --------------------------------------------------------------
 
-
-load("rent_listings_raw.RData")
+load("rent_listings.RData")
 
 ## Variable Selection ----------------------------------------------------------
 
@@ -980,6 +979,8 @@ set.seed(123)
 ### parameter tuning for that model
 ###############################################################################*
 
+rf_results <- data.frame(matrix(ncol = 6, nrow = 5))
+names(rf_results) <- c("model_nr", "model_type", "oob_rmse", "oob_mse", "mae", "mae/mean")
 
 ## Model 1: All variables, vanilla attempt -------------------------------------
 
@@ -1002,15 +1003,48 @@ plot(rf1)                             # plot oob errors vs. no. of trees:
 # after some time mse doesn't improve
 # by much
 
-rf1$mse[which.min(rf1$mse)]           # oob mse with 500 trees: 103206
-
+oob_mse <- rf1$mse[which.min(rf1$mse)]           
+oob_rmse <- sqrt(oob_mse)
 
 y_hat <- predict(rf1, Dmod_test) 
-MAE(y_hat, Dmod_test$rent_full)       # MAE: 211.77
+mae <- MAE(y_hat, Dmod_test$rent_full)       
+mae_mean <- mae/mean(Dmod_test$rent_full)
+
+rf_results[1,] <- c(1, "RF", oob_rmse, oob_mse, mae, mae_mean)
+
+
+## Model 2: Selected Variables (same variables as ols model 2) -----------------
+
+# Vars used: area, rooms, furnished (yes/no), balcony (yes/no), micro ratings,
+# distances to places of interest
+split <- initial_split(
+  Dmod %>%
+    select(rent_full, area, rooms, furnished, balcony, 
+           dplyr::starts_with("micro"), dplyr::starts_with("dist")),
+  prop = 0.8
+)
+Dmod_train <- training(split)
+Dmod_test <- testing(split)
+
+rf2 <- ranger(
+  formula       = rent_full ~ .,
+  data          = Dmod_train,
+  mtry          = 4,                # p/3 as in prev. model
+  min.node.size = 5
+)
+
+oob_mse <- rf2$prediction.error     # oob mse: 157119
+oob_rmse <- sqrt(oob_mse)
+
+mae <- MAE(predict(rf2, data = Dmod_test)$prediction, Dmod_test$rent_full)
+# MAE: 271.66 (better than ols: 332.84)
+mae_mean <- mae/mean(Dmod_test$rent_full)
+
+rf_results[2,] <- c(2, "RF", oob_rmse, oob_mse, mae, mae_mean)
 
 
 
-## Model 2: Selected Variables (same variables as ols model 3) -----------------
+## Model 3: Selected Variables (same variables as ols model 3) -----------------
 
 # Vars used: area, rooms, general micro rating, arbeitsmarktregionen
 # Note: we use the ranger package for further models due to its faster
@@ -1024,42 +1058,21 @@ split <- initial_split(
 Dmod_train <- training(split)
 Dmod_test <- testing(split)
 
-rf2 <- ranger(
+rf3 <- ranger(
   formula       = rent_full ~ .,
   data          = Dmod_train,
   mtry          = 33,                # p/3 as in prev. model
   min.node.size = 5
 )
 
-rf2$prediction.error      # oob mse: 115586
-MAE(predict(rf2, data = Dmod_test)$prediction, Dmod_test$rent_full)
-# MAE: 228.40 (better than ols: 256)
+oob_mse <- rf3$prediction.error
+oob_rmse <- sqrt(oob_mse)
 
+mae <- MAE(predict(rf3, data = Dmod_test)$prediction, Dmod_test$rent_full)
 
+mae_mean <- mae/mean(Dmod_test$rent_full)
 
-## Model 3: Selected Variables (same variables as ols model 2) -----------------
-
-# Vars used: area, rooms, furnished (yes/no), balcony (yes/no), micro ratings,
-# distances to places of interest
-split <- initial_split(
-  Dmod %>%
-    select(rent_full, area, rooms, furnished, balcony, 
-           dplyr::starts_with("micro"), dplyr::starts_with("dist")),
-  prop = 0.8
-)
-Dmod_train <- training(split)
-Dmod_test <- testing(split)
-
-rf3 <- ranger(
-  formula       = rent_full ~ .,
-  data          = Dmod_train,
-  mtry          = 4,                # p/3 as in prev. model
-  min.node.size = 5
-)
-rf3$prediction.error               # oob mse: 157119
-MAE(predict(rf3, data = Dmod_test)$prediction, Dmod_test$rent_full)
-# MAE: 271.66 (better than ols: 332.84)
-
+rf_results[3,] <- c(3, "RF", oob_rmse, oob_mse, mae, mae_mean)
 
 
 ###############################################################################*
@@ -1128,7 +1141,7 @@ MAE(predict(rf3, data = Dmod_test)$prediction, Dmod_test$rent_full)
 #10   37         3        0.8         321.3880
 
 
-## Model 3: Model obtained by hyper-parameter tuning ---------------------------
+## Model 4: Model obtained by hyper-parameter tuning ---------------------------
 
   # This is the model with the hyper-parameters which are obtained through
   # tuning.
@@ -1145,15 +1158,20 @@ rf4 <- ranger(
   seed            = 123
 )
 
-rf4$prediction.error                         # oob MSE: 101566.4
-MAE(predict(rf4, data = Dmod_test)$prediction, Dmod_test$rent_full)
-                                             # MAE: 216.43
+oob_mse <- rf4$prediction.error 
+oob_rmse <- sqrt(oob_mse)
+
+mae <- MAE(predict(rf4, data = Dmod_test)$prediction, Dmod_test$rent_full)
+mae_mean <- mae/mean(Dmod_test$rent_full)                                             
 
   # MAE is higher than initially obtained random forest. This probably comes 
   # from having a smaller sample size of 0.8 instead of the full sample size
   # as the default randomForest package provides
 
-## Model 4: Model obtained by hyper-parameter tuning with sample size 1 --------
+rf_results[4,] <- c(4, "RF", oob_rmse, oob_mse, mae, mae_mean)
+
+
+## Model 5: Model obtained by hyper-parameter tuning with sample size 1 --------
   # As we ascertained, we also try the predictive performance of the model
   # with hyper-parameter tuning and with a sample size of 1
 split <- initial_split(Dmod, prop = 0.8)
@@ -1169,13 +1187,14 @@ rf5 <- ranger(
   seed            = 123
 )
 
-rf5$prediction.error                         # oob MSE: 101566.4
-MAE(predict(rf5, data = Dmod_test)$prediction, Dmod_test$rent_full)
-# MAE: 216.43
+oob_mse <- rf5$prediction.error
+oob_rmse <- sqrt(oob_mse)
+
+mae <- MAE(predict(rf5, data = Dmod_test)$prediction, Dmod_test$rent_full)
+mae_mean <- mae/mean(Dmod_test$rent_full)
 
 
-
-
+rf_results[5,] <- c(5, "RF", oob_rmse, oob_mse, mae, mae_mean)
 
 
 
