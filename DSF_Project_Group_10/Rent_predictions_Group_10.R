@@ -203,14 +203,16 @@ area_bigrams <- D %>% filter(is.na(area) == T) %>%
   # we use a simplification here: if several tokens fulfill the criteria for a single 
   # observation, we only keep the first one.
   
-  select(rowid, descr, area, word1, word2)
+  select(rowid, descr, word1, word2)
 
 # Those are 520 observations where we could detect an "area" thanks to tokenization
 # This represents 520/5089 = 10% of the maximum we could have predicted.
 
 # If we wanted to assign them to D to improve it, we would have used this command: 
 
-# D[area_bigrams$rowid,"area"] <- as.numeric(area_bigrams$word1) 
+# D = D %>% left_join(area_bigrams, by = c("rowid"= "rowid", "descr" = "descr")) %>% 
+# mutate(area = ifelse(is.na(word1), area, word1)) %>%
+# select(-c(word1, word2))
 
 # However, we first want to run a "diagnosis", that is: how well this method 
 # performs to detect areas on the data for which we have "area" entries.
@@ -278,12 +280,13 @@ number <- as.character(c(seq(from=1, to=10, by=0.5),
 room <- as.character(c("zimmer", "pièces", "pièce", "pcs", "stanze", "räume", "camere"))
 
 new_rooms <- bigrams %>%
+  select(c(rowid, descr, rooms, bigram)) %>%
   filter(is.na(rooms) == T) %>%
   separate(bigram, c("word1", "word2"), sep = " ") %>%
   filter(word1 %in% number) %>%
   filter(word2 %in% room) %>%
   unite(bigram, word1, word2, sep = " ", remove = F) %>%
-  distinct(rowid, .keep_all = TRUE)  
+  distinct(rowid, .keep_all = TRUE)
 
 # Note that rowid here does not correspond to rowid made on D previously
 
@@ -294,13 +297,18 @@ new_rooms <- bigrams %>%
 
 trigrams <- d_tok %>% 
   filter(is.na(rooms) == T) %>%
+  select(c(rowid, descr, rooms)) %>%
   unnest_tokens(trigram, descr, token = "ngrams", n = 3, drop = F) %>% 
-  separate(trigram, c("word1", "word2", "word3"), sep = " ") %>%
-  filter((word2 == "1" & word3 =="2")) %>%
-  unite(word2, word2, word3, sep = "/", remove = F) %>%
-  select(-word3) %>% 
-  filter(word1 %in% number) %>%
+  separate(trigram, c("word_a", "word_b", "word_c"), sep = " ") %>%
+  filter((word_b == "1" & word_c =="2")) %>%
+  unite(word_b, word_b, word_c, sep = "/", remove = F) %>%
+  select(-word_c) %>% 
+  filter(word_a %in% number) %>%
   distinct(rowid, .keep_all = TRUE)
+
+new_rooms = new_rooms %>% left_join(trigrams, by= c("rowid"="rowid", "rooms" = "rooms", "descr" = "descr")) %>%
+  mutate(rooms_new = ifelse(is.na(word_a), as.double(gsub(",", ".", word1)), as.double(word_a) + 0.5)) %>%
+  select(rowid, descr, rooms_new)
 
 # This trick works because there is only when talking about rooms that there is 
 # a format like "number" "1" "2" in the tokenization, corresponding to "number" "1/2".
@@ -353,12 +361,14 @@ rooms_diagnosis %>%
 
 # We now assign the "rooms" their values where there were NAs in the dataset:
 
-improved_data_analyzed[new_rooms$rowid,"rooms"] <- as.double(gsub(",", ".", new_rooms$word1))
-improved_data_analyzed[trigrams$rowid,"rooms"] <- as.double(trigrams$word1) + 0.5
+improved_data_analyzed = improved_data_analyzed %>% 
+  left_join(new_rooms, by = c("rowid"= "rowid", "descr" = "descr")) %>%
+  mutate(rooms = ifelse(is.na(rooms_new), rooms, rooms_new)) %>%
+  select(-rooms_new)
 
-# Everytime, we match the rowid of the newly created object with the rowid of the
-# clean dataset to directly assign the captured value in the right row of the 
-# column we're dealing with.
+# We left join our new findings to the data set and then overwrite the column 
+# with the new value if it exists, then drop the column with the new values 
+# since those are incorporated to the original column of the dataset.
 
 ### furnished ------------------------------------------------------------------
 
@@ -367,17 +377,20 @@ furnished_words <- c("furnished", "furniture",
                      "möbliert", "möblierte", "möbel", "möbeln",
                      "ammobiliato", "mobilio", "mobili")
 
-# Making sure we don't say it's furnished if it says "not furnished"
+# Making sure we don't say it's furnished if it says i.e. "not furnished"
 
 negation <- c("non", "not", "no", "nicht", "ohne", "pas", "senza")
 
 furnished_appartments <- bigrams %>%
+  select(c(rowid, furnished, bigram)) %>%
   filter(furnished == 0) %>%
   separate(bigram, c("word1", "word2"), sep = " ") %>%
   filter(!word1 %in% negation) %>%
   filter(word2 %in% furnished_words) %>%
   unite(bigram, word1, word2, sep = " ", remove = F) %>%
-  distinct(rowid, .keep_all = TRUE)
+  distinct(rowid, .keep_all = TRUE) %>%
+  mutate(new_furnished = 1) %>% 
+  select(c(rowid, new_furnished))
 
 # For "furnished" and "balcony", we do not run a diagnosis as it could be the case
 # that the appartment has a balcony, it is indicated as such in the balcony column
@@ -386,7 +399,10 @@ furnished_appartments <- bigrams %>%
 # to furnished yes or no is not as impactful as a quantitative mistake in the area 
 # assigned for example.
 
-improved_data_analyzed[unique(furnished_appartments$rowid),"furnished"] <- 1
+improved_data_analyzed = improved_data_analyzed %>% 
+  left_join(furnished_appartments, by = c("rowid" = "rowid")) %>%
+  mutate(furnished = ifelse(is.na(new_furnished), furnished, new_furnished)) %>% 
+  select(-new_furnished)
 
 ### balcony --------------------------------------------------------------------
 
@@ -398,16 +414,23 @@ balcony_appartments <- bigrams %>%
   filter(!word1 %in% negation) %>%
   filter(word2 %in% balcony_words) %>%
   unite(bigram, word1, word2, sep = " ", remove = F) %>%
-  distinct(rowid, .keep_all = TRUE)
+  distinct(rowid, .keep_all = TRUE) %>% 
+  mutate(new_balcony = 1) %>% 
+  select(c(rowid, new_balcony))
 
-improved_data_analyzed[balcony_appartments$rowid,"balcony"] <- 1 # 8086 obs
+improved_data_analyzed = improved_data_analyzed %>% 
+  left_join(balcony_appartments, by = c("rowid" = "rowid")) %>%
+  mutate(balcony = ifelse(is.na(new_balcony), balcony, new_balcony)) %>% 
+  select(-new_balcony)
 
 ### home_type ------------------------------------------------------------------
 
 home_type_words = c("wohnung","attika","dachwohnung","terrassenwohnung","maisonette",      
                     "studio","loft","ferienwohnung", "attique", "soffitta", "attico","sottotetto", "duplex")
 
-new_home_types = tok %>% filter(word %in% home_type_words) %>% 
+new_home_types = tok %>% 
+  select(rowid, home_type, word) %>%
+  filter(word %in% home_type_words) %>% 
   mutate(home_type = tolower(home_type)) %>%
   filter(home_type != word) %>% 
   filter(word != "wohnung") %>% 
@@ -418,24 +441,45 @@ new_home_types = tok %>% filter(word %in% home_type_words) %>%
   
   # We only want to overwrite Wohnungen and not one 'special' types by another 'special' type
   
-  distinct(rowid, .keep_all = TRUE) 
+  distinct(rowid, .keep_all = TRUE) %>%
+  
+  # we still need to put the translations back into their original meaning
+  
+  mutate(home_type_new = ifelse(word %in% c("wohnung","attika","dachwohnung","terrassenwohnung",
+                                            "maisonette","studio","loft","ferienwohnung"), 
+                                word,
+                                
+                                # If they're in the original unique home_types,
+                                # We keep them as they are.
+                                
+                                ifelse(word %in% c("attique", "soffitta", "attico","sottotetto"), 
+                                       "attika", 
+                                       
+                                       # All of those mean attika
+                                       
+                                       "maisonette")))
+
+# We are just left with "duplex", which is
+# is associated with maisonette.
+
 
 # Since we put everything in lowercase during tokenization, we want to re-capitalize
-# the home_types so it looks nicer in later analyses
+# the home_types so we can left-join with the original data-set
 
 cap <- function(x) {
   paste0(toupper(substring(x,1,1)), substring(x,2))
 }
 
-improved_data_analyzed[new_home_types$rowid,"home_type"] <- cap(
-  ifelse(new_home_types$word %in% c("wohnung","attika","dachwohnung","terrassenwohnung",
-                                         "maisonette","studio","loft","ferienwohnung"),
-         new_home_types$word,
-         
-         # If the home_type is in the original names we have, we assign those.
-         
-         ifelse(word %in% c("attique", "soffitta", "attico","sottotetto"), "attika", "maisonette"))
-)
+# We apply this function to all columns except the rowid
+
+new_home_types[,2:4] = apply(new_home_types[,2:4], 2, cap)
+
+# We assign the values
+
+improved_data_analyzed = improved_data_analyzed %>% 
+  left_join(new_home_types, by = c("rowid" = "rowid", "home_type" = "home_type")) %>%
+  mutate(home_type = ifelse(is.na(home_type_new), home_type, home_type_new)) %>%
+  select(-c(word,home_type_new))
 
 ### final steps ----------------------------------------------------------------
 
@@ -460,13 +504,9 @@ dim(improved_data_analyzed)
 data_analyzed = improved_data_analyzed
 
 # We might be interested in filtering out Ferienwohnungen as they might not be
-# rented out for a full month 
-
-# There are 3 of them, and they are not captured by tokenisation but were originally in
-# data_analyzed
+# rented out for a full month and thus the rent price/ m2 might be distorted
 
 data_analyzed_ferien <- data_analyzed %>% filter(home_type != "Ferienwohnung") 
-
 
 ### DATA ANALYSIS--------------------------------------------------------------
 
