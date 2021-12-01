@@ -577,7 +577,7 @@ ggplot(aes(x = rooms, y = area, col = home_type)) +
   geom_point() +
   geom_hline(yintercept = mean(data_analyzed$area), col = "blue") + # average area in Switzerland
   geom_smooth(method = "lm", col = "black") +
-  labs(title ="Flat size (area) depending on number of rooms",
+  labs(title ="Flat size (area) depending on number of rooms by hometype",
        x = "Number of rooms",
        y = "Flat size (area)") +
   theme_bw()
@@ -586,7 +586,7 @@ ggplot(aes(x = rooms, y = area, col = home_type)) +
   # Number of flats offered depending on cantons
 
 flats_canton <- data_analyzed %>% select(KTKZ) %>% mutate(flat = 1)
-ggplot(data = flats_canton, aes(x=KTKZ, y = flat)) + geom_bar(stat = "identity", color ="darkblue") + labs(title = "Flat offerings depending on canton",
+ggplot(data = flats_canton, aes(x=KTKZ, y = flat)) + geom_bar(stat = "identity", color ="darkblue") + labs(title = "Flat offerings per canton",
                                                                                                        x = "Canton",
                                                                                                        y = "Number of flat offerings") +
   theme_bw()
@@ -611,7 +611,7 @@ ggplot(data_analyzed, aes(x = area, y = rent_full, col = KTKZ)) +
   geom_point(size = 0.8) +
   geom_smooth(method = "lm", col = "black") +                             # add linear regressions
   geom_hline(yintercept = mean(data_analyzed$rent_full), col = "blue") + # add average rent price
-  labs(title ="Rent price depending on flat size",
+  labs(title ="Rent price depending on flat size (area) by canton",
        x = "Flat size",
        y = "Rent price (full)") +
   theme_bw()
@@ -622,7 +622,7 @@ ggplot(data_analyzed, aes(x = area, y = rent_m2)) +
   geom_point() +
   geom_smooth(method = "lm", col = "red") +                             # add linear regressions
   geom_hline(yintercept = mean(data_analyzed$rent_m2), col = "blue") + # add average rent price
-  labs(title ="Rent price per m2 depending on flat size",
+  labs(title ="Rent price per m2 depending on flat size (area)",
        x = "Flat size",
        y = "Rent price per m2")  +
   theme_bw()
@@ -633,7 +633,7 @@ ggplot(data_analyzed, aes(x = area, y = rent_m2, col = KTKZ)) +
   geom_point() +
   geom_smooth(method = "lm", col = "black") +                             # add linear regressions
   geom_hline(yintercept = mean(data_analyzed$rent_m2), col = "blue") + # add average rent price
-  labs(title ="Rent price per m2 depending on flat size",
+  labs(title ="Rent price per m2 depending on flat size (area) by canton",
        x = "Flat size",
        y = "Rent price per m2")  +
   theme_bw()
@@ -651,7 +651,7 @@ avg_rent_per_canton <- data_analyzed %>%
 
 ggplot(avg_rent_per_canton) + geom_point(aes(x = reorder(KTKZ, -avg_cantonal_rent), y = avg_cantonal_rent)) +
   geom_hline(yintercept = mean(data_analyzed$rent_full), col = "blue") +
-  labs(title ="Average price rent full per canton",
+  labs(title ="Average rent price (full) per canton",
        x = "Canton",
        y = "Average rent price (full)") +
   theme_bw()
@@ -667,7 +667,7 @@ avg_rent_per_Arbeitsmarktgrossregion <- data_analyzed %>%
 
 ggplot(avg_rent_per_Arbeitsmarktgrossregion) + geom_point(aes(x = reorder(Arbeitsmarktgrossregionen.2018, -avg_Arbeitsmarktgrossregionen_rent), y = avg_Arbeitsmarktgrossregionen_rent)) +
   geom_hline(yintercept = mean(data_analyzed$rent_full), col = "blue") +
-  labs(title ="Average rent full per Arbeitsmarktgrossregion",
+  labs(title ="Average rent price (full) per Arbeitsmarktgrossregion",
        x = "Arbeitsmarktgrossregion",
        y = "Average rent price (full)")+
   theme_bw()
@@ -799,7 +799,7 @@ avg_room_number <- data_analyzed$rooms %>% na.omit() %>% mean()
 
 ggplot(data_analyzed) + geom_point(aes(x = rooms, y = rent_full)) +
   geom_hline(yintercept = mean(data_analyzed$rent_full), col = "blue")+ # average rent price in Switzerland
-  labs(title ="Rent price full depending on number of rooms",
+  labs(title ="Rent price (full) depending on number of rooms",
        x = "Number of rooms",
        y = " Rent price (full)") +
   theme_bw()
@@ -809,7 +809,7 @@ ggplot(data_analyzed) + geom_point(aes(x = rooms, y = rent_full)) +
 ggplot(avg_rent_per_room_size) + geom_point(aes(x = rooms, y = avg_rent_rooms)) +
   geom_hline(yintercept = mean(data_analyzed$rent_full), col = "blue")+ # average rent price in Switzerland
   geom_vline(xintercept = avg_room_number, col = "red") + # average number of rooms
-  labs(title ="Average rent price full by room number",
+  labs(title ="Average rent price (full) by room number",
        x = "Number of rooms",
        y = "Average rent price (full)") +
   theme_bw()
