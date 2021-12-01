@@ -141,12 +141,12 @@ mae_pred_mean <- caret::MAE(pred, Dmod_test$rent_full)/mean(Dmod_test$rent_full)
 
 ##Save the results after each iteration to table  ------------------------------
 ## Always change the number of the row when saving the results of a new set of parameters 
-# and the training. At the moment it is comment out becuase we set the best parameters already
+# and the training. At the moment it is comment out because we set the best parameters already
 # at the beginning. 
 
 #boosting_results[1, ] <- c(model_type, n.trees, interaction.depth, shrinkage, 
-                          cv.folds, training_time, rmse_training, rmse_prediction,
-                          mae_prediction, mae_pred_mean)
+                          #cv.folds, training_time, rmse_training, rmse_prediction,
+                          #mae_prediction, mae_pred_mean)
 
 
 # Omit all the rows that are not filled 

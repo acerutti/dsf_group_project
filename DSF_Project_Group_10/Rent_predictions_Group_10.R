@@ -1143,3 +1143,107 @@ MAE(predict(rf4, data = Dmod_test)$prediction, Dmod_test$rent_full)
   # MAE is higher than initially obtained random forest. This probably comes 
   # from having a smaller sample size of 0.8 instead of the full sample size
   # as the default randomForest package provides
+
+
+###############################################################################*
+## Boosted Trees --------------------------------------------------------------
+###############################################################################*
+
+###############################################################################*
+### BOOSTING - NOTES
+# 
+# Data Dmod used for modelling
+# We split the data into test and training set with a proportion of 0.8. 
+# We set the parameter as variables that can be changed outside of the training
+# function so that it is easier to save different training in our table and compare them. 
+
+###############################################################################*
+
+## Training  ------------------------------------------------------
+# Create training (80%) and test (20%) 
+# Use set.seed for reproducibility (already done it the upper part)
+
+Dmod_split <- initial_split(Dmod, prop = .8)
+Dmod_train <- training(Dmod_split)
+Dmod_test  <- testing(Dmod_split)
+
+# Setting the parameters
+# Change here the variable for the training
+model_type <- "gbm"
+n.trees <- 3200
+interaction.depth <- 5 #maximum depth of variable interactions
+shrinkage <- 0.1 #similar as learning rate
+cv.folds <-  10 # cross validation
+
+# for measuring training time - get the start time
+start_time <- Sys.time() 
+
+# fitting of the model
+gbm.fit <- gbm(
+  formula = rent_full ~ .,
+  distribution = "gaussian",
+  data = Dmod_train,
+  n.trees = n.trees,
+  interaction.depth = interaction.depth, 
+  shrinkage = shrinkage, 
+  cv.folds = cv.folds,
+  n.cores = NULL, # will use all cores by default
+  verbose = FALSE
+)  
+
+# get the end time
+end_time <- Sys.time() 
+end_time - start_time # calculate the length of the training - appears in the console
+
+training_time <- difftime(end_time, start_time, units = "mins") #save the training time
+# training_time: 53.05 min
+
+# print results
+print(gbm.fit)
+
+# get MSE and compute RMSE
+rmse_training <- sqrt(min(gbm.fit$cv.error))
+
+
+## Predicting -----------------------------------------------------------------*
+# predict values for test data
+pred <- predict(gbm.fit, n.trees = gbm.fit$n.trees, Dmod_test)
+
+
+
+## Assessing Performance of the model -----------------------------------------*
+# RMSE
+rmse_prediction <- caret::RMSE(pred, Dmod_test$rent_full) #rmse_prediction: 308.49
+
+# mae_prediction
+mae_prediction <- caret::MAE(pred, Dmod_test$rent_full) #mae_prediction: 208.13
+
+
+# MAE/MEAN
+mae_pred_mean <- caret::MAE(pred, Dmod_test$rent_full)/mean(Dmod_test$rent_full)
+#mae_pred_mean: 0.12
+
+
+##Save the results after each iteration to table  -----------------------------*
+## Always change the number of the row when saving the results of a new set of parameters 
+# and the training. At the moment it is comment out because we set the best parameters already
+# at the beginning. 
+
+#boosting_results[1, ] <- c(model_type, n.trees, interaction.depth, shrinkage, 
+#cv.folds, training_time, rmse_training, rmse_prediction,
+#mae_prediction, mae_pred_mean)
+
+
+# Omit all the rows that are not filled 
+# boosting_results <- na.omit(boosting_results)
+
+# Save the data frame 
+# write.csv(boosting_results,"data/boosting_results.csv", row.names = FALSE)
+
+
+## Plots  ---------------------------------------------------------------------*
+# plot loss function as a result of n trees added to the ensemble
+gbm.perf(gbm.fit, method = "cv")
+
+# plot for showing the importance of each variable
+vip::vip(gbm.fit)
