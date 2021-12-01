@@ -380,42 +380,41 @@ split <- initial_split(Dmod, prop = 0.8)
 Dmod_train <- analysis(split)
 
 # we start with a hyper-parameter grid as introduced in the lecture
-hyper_grid <- expand.grid(
-  mtry       = seq(35, 45, by = 2),
-  node_size  = seq(3, 9, by = 2),
-  sampe_size = c(.55, .632, .70, .80),
-  OOB_RMSE   = 0 # a place to dump results
-)
+#hyper_grid <- expand.grid(
+#  mtry       = seq(35, 45, by = 2),
+#  node_size  = seq(3, 9, by = 2),
+#  OOB_RMSE   = 0 # a place to dump results
+#  sampe_size = c(.55, .632, .70, .80),
+#)
 
-for(i in 1:nrow(hyper_grid)) {
+#for(i in 1:nrow(hyper_grid)) {
   
   
-  model <- ranger(
-    formula         = rent_full ~ ., 
-    data            = Dmod_train, 
-    num.trees       = 500,
-    mtry            = hyper_grid$mtry[i],
-    write.forest    = FALSE,
-    min.node.size   = hyper_grid$node_size[i],
-    sample.fraction = hyper_grid$sampe_size[i],
-    oob.error       = TRUE,
-    verbose         = FALSE,
-    seed            = 123
-)
+#  model <- ranger(
+#    formula         = rent_full ~ ., 
+#    data            = Dmod_train, 
+#    num.trees       = 500,
+#    mtry            = hyper_grid$mtry[i],
+#    write.forest    = FALSE,
+#    min.node.size   = hyper_grid$node_size[i],
+#    sample.fraction = hyper_grid$sampe_size[i],
+#    oob.error       = TRUE,
+#    verbose         = FALSE,
+#    seed            = 123
+#)
 
 # add OOB error to grid
-hyper_grid$OOB_RMSE[i] <- sqrt(model$prediction.error)
+#hyper_grid$OOB_RMSE[i] <- sqrt(model$prediction.error)
 
 # progress
-print(i)
-}
+#print(i)
+#}
 
 
-hyper_grid %>% arrange(OOB_RMSE)
+#hyper_grid %>% arrange(OOB_RMSE)
 
 # Results (OOB_RMSE) don't wary by much (Goes from 320 to 328). 
 # Nonetheless, here are the top 10 models
-
 
 
 #      mtry  node_size  sampe_size    OOB_RMSE
@@ -432,6 +431,9 @@ hyper_grid %>% arrange(OOB_RMSE)
 
 
 ## Model 3: Model obtained by hyper-parameter tuning ---------------------------
+
+  # This is the model with the hyper-parameters which are obtained through
+  # tuning.
 split <- initial_split(Dmod, prop = 0.8)
 Dmod_train <- training(split)
 Dmod_test <- testing(split)
@@ -439,102 +441,16 @@ Dmod_test <- testing(split)
 rf4 <- ranger(
   formula         = rent_full ~ .,
   data            = Dmod_train,
-  mtry            = 30,
+  mtry            = 45,
   min.node.size   = 3,
   sample.fraction = 0.8,
   seed            = 123
 )
 
-rf4$prediction.error                         # oob MSE: 101561.6
+rf4$prediction.error                         # oob MSE: 101566.4
 MAE(predict(rf4, data = Dmod_test)$prediction, Dmod_test$rent_full)
                                              # MAE: 216.43
 
-###############################################################################*
-## Boosted Decision Trees ------------------------------------------------------
-###############################################################################*
-
- 
-###############################################################################*
-### BOOSTING - NOTES
-# 
-# Data Dmod used for modelling
-# 
-# 
-###############################################################################*
-
-
-## Model 1: all variables ------------------------------------------------------
-# Create training (80%) and test (20%) 
-# Use set.seed for reproducibility
-
-set.seed(123)
-Dmod_split <- initial_split(Dmod, prop = .8)
-Dmod_train <- training(Dmod_split)
-Dmod_test  <- testing(Dmod_test)
-
-# Training
-start_time <- Sys.time() # for measuring training time - get the start time
-
-gbm.fit <- gbm(
-  formula = rent_full ~ .,
-  distribution = "gaussian",
-  data = Dmod_train,
-  n.trees = 20000,
-  interaction.depth = 1,
-  shrinkage = 0.001,
-  cv.folds = 5,
-  n.cores = NULL, # will use all cores by default
-  verbose = FALSE
-)  
-
-end_time <- Sys.time() # get the end time
-end_time - start_time # calculate the length of the training - appears in the console
-
-# print results
-print(gbm.fit)
-
-# Result for 100 trees: 
-# The best cross-validation iteration was 100. There were 120 predictors of which 1 had non-zero influence.
-
-# Result for 1000 trees: 
-# The best cross-validation iteration was 1000. There were 120 predictors of which 1 had non-zero influence.
-
-# Result for 2000 trees: 
-# The best cross-validation iteration was 2000. There were 120 predictors of which 3 had non-zero influence.
-
-# Result for 4000 trees: 
-# Time difference of 7.881699 mins
-# The best cross-validation iteration was 4000. There were 120 predictors of which 6 had non-zero influence.
-
-# Result for 20000 trees:
-# Time difference of 1.879366 hours
-# The best cross-validation iteration was 20000. There were 120 predictors of which 30 had non-zero influence.
-
-
-# get MSE and compute RMSE
-sqrt(min(gbm.fit$cv.error))
-## With 100 trees: 660.7521 CHF off the real price
-## With 1000 trees: 566.5158 CHF off the real price
-## With 2000 trees: 524.6013
-## With 4000 trees: 484.7614
-## With 20000 trees: 407.6505
-
-# plot loss function as a result of n trees added to the ensemble
-gbm.perf(gbm.fit, method = "cv")
-
-
-# Plot which variable had the most influence on the rentprice
-par(mar = c(5, 8, 1, 1))
-summary(
-  gbm.fit, 
-  cBars = 10,
-  method = relative.influence, # also can use permutation.test.gbm
-  las = 2
-)
-
-# Another plot for showing the importance of each variable
-# devtools::install_github("koalaverse/vip")
-
-library(vip)
-vip::vip(gbm.fit)
-
+# MAE is higher than initially obtained random forest. This probably comes 
+# from having a smaller sample size of 0.8 instead of the full sample size
+# as the default randomForest package provides

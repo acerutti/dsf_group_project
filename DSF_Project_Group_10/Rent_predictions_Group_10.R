@@ -1051,6 +1051,8 @@ rf3$prediction.error               # oob mse: 157119
 MAE(predict(rf3, data = Dmod_test)$prediction, Dmod_test$rent_full)
 # MAE: 271.66 (better than ols: 332.84)
 
+
+
 ###############################################################################*
 ## Hyper-parameter tuning - Random Forest---------------------------------------
 ###############################################################################*
@@ -1058,7 +1060,7 @@ MAE(predict(rf3, data = Dmod_test)$prediction, Dmod_test$rent_full)
 ###############################################################################*
 ### HYPER-PARAMETER TUNING - NOTES:
 # We do a hyper-parameter tuning for a random forest with all the variables in
-# modelling_vars, distance, and microlocations
+# modelling_vars, distance, and micro ratings
 #
 # Only run this section if you want to replicate the results!
 ###############################################################################*
@@ -1067,57 +1069,60 @@ split <- initial_split(Dmod, prop = 0.8)
 Dmod_train <- analysis(split)
 
 # we start with a hyper-parameter grid as introduced in the lecture
-hyper_grid <- expand.grid(
-  mtry       = seq(35, 45, by = 2),
-  node_size  = seq(3, 9, by = 2),
-  sampe_size = c(.55, .632, .70, .80),
-  OOB_RMSE   = 0 # a place to dump results
-)
+#hyper_grid <- expand.grid(
+#  mtry       = seq(35, 45, by = 2),
+#  node_size  = seq(3, 9, by = 2),
+#  OOB_RMSE   = 0 # a place to dump results
+#  sampe_size = c(.55, .632, .70, .80),
+#)
 
-for(i in 1:nrow(hyper_grid)) {
-  
-  
-  model <- ranger(
-    formula         = rent_full ~ ., 
-    data            = Dmod_train, 
-    num.trees       = 500,
-    mtry            = hyper_grid$mtry[i],
-    write.forest    = FALSE,
-    min.node.size   = hyper_grid$node_size[i],
-    sample.fraction = hyper_grid$sampe_size[i],
-    oob.error       = TRUE,
-    verbose         = FALSE,
-    seed            = 123
-  )
-  
-  # add OOB error to grid
-  hyper_grid$OOB_RMSE[i] <- sqrt(model$prediction.error)
-  
-  # progress
-  print(i)
-}
+#for(i in 1:nrow(hyper_grid)) {
 
 
-# hyper_grid %>% arrange(OOB_RMSE)
+#  model <- ranger(
+#    formula         = rent_full ~ ., 
+#    data            = Dmod_train, 
+#    num.trees       = 500,
+#    mtry            = hyper_grid$mtry[i],
+#    write.forest    = FALSE,
+#    min.node.size   = hyper_grid$node_size[i],
+#    sample.fraction = hyper_grid$sampe_size[i],
+#    oob.error       = TRUE,
+#    verbose         = FALSE,
+#    seed            = 123
+#)
 
-# Results (OOB_RMSE) don't wary by much. Nonetheless, here are the top 10 models
+# add OOB error to grid
+#hyper_grid$OOB_RMSE[i] <- sqrt(model$prediction.error)
 
+# progress
+#print(i)
+#}
+
+
+#hyper_grid %>% arrange(OOB_RMSE)
+
+# Results (OOB_RMSE) don't wary by much (Goes from 320 to 328). 
+# Nonetheless, here are the top 10 models
 
 
 #      mtry  node_size  sampe_size    OOB_RMSE
-#1     30         3      0.800        324.0606
-#2     30         5      0.800        324.7636
-#3     26         3      0.800        325.0434
-#4     28         3      0.800        325.1838
-#5     28         5      0.800        325.5639
-#6     30         7      0.800        325.7180
-#7     26         5      0.800        325.7482
-#8     30         3      0.700        326.0298
-#9     24         3      0.800        326.2729
-#10    28         3      0.700        326.3092
+#1    45         3        0.8         320.4696
+#2    41         3        0.8         320.6417
+#3    43         3        0.8         320.8151
+#4    39         3        0.8         320.9273
+#5    45         5        0.8         321.0673
+#6    35         3        0.8         321.1452
+#7    43         5        0.8         321.2615
+#8    41         5        0.8         321.3123
+#9    39         5        0.8         321.3756
+#10   37         3        0.8         321.3880
 
 
 ## Model 3: Model obtained by hyper-parameter tuning ---------------------------
+
+  # This is the model with the hyper-parameters which are obtained through
+  # tuning.
 split <- initial_split(Dmod, prop = 0.8)
 Dmod_train <- training(split)
 Dmod_test <- testing(split)
@@ -1125,13 +1130,16 @@ Dmod_test <- testing(split)
 rf4 <- ranger(
   formula         = rent_full ~ .,
   data            = Dmod_train,
-  mtry            = 30,
+  mtry            = 45,
   min.node.size   = 3,
   sample.fraction = 0.8,
   seed            = 123
 )
 
-rf4$prediction.error                         # oob MSE: 101561.6
+rf4$prediction.error                         # oob MSE: 101566.4
 MAE(predict(rf4, data = Dmod_test)$prediction, Dmod_test$rent_full)
-# MAE: 216.43
+                                             # MAE: 216.43
 
+  # MAE is higher than initially obtained random forest. This probably comes 
+  # from having a smaller sample size of 0.8 instead of the full sample size
+  # as the default randomForest package provides
