@@ -4,7 +4,8 @@
 # Preparation: Parsing Data 
 # Note: This script is an auxilliary to the main script. The only aim of this
 # script is to prepare the obtained csv-file into an RData file for easier use
-# We used a separate file as this part uses intermediate data files.
+# We used a separate file as this part uses intermediate data files. You
+# should however have received the RData file which is created in this script
 #
 # Alessandra Cerutti, Amélie Madrona, Maximilian Bisges, Jason Rosenthal
 # 5.12.2021
@@ -22,7 +23,7 @@ library(tidyverse)
 D <- read_csv("data_raw.csv", col_names = T)
 
 
-## Resolving Parsing Failures ---------------------------------------------------
+## Resolving Parsing Failures -------------------------------------------------*
 
 # parsing failures
 problems <- problems()
@@ -45,4 +46,5 @@ problems <- problems() # we ignore the problematic cases for now
 # Save dataframe and problems. This is the RData file used for the actual main
 # script
 save(D, problems, file = "rent_listings.RData")
+
 
