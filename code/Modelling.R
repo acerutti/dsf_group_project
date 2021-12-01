@@ -411,23 +411,24 @@ print(i)
 }
 
 
-# hyper_grid %>% arrange(OOB_RMSE)
+hyper_grid %>% arrange(OOB_RMSE)
 
-# Results (OOB_RMSE) don't wary by much. Nonetheless, here are the top 10 models
+# Results (OOB_RMSE) don't wary by much (Goes from 320 to 328). 
+# Nonetheless, here are the top 10 models
 
 
 
 #      mtry  node_size  sampe_size    OOB_RMSE
-#1     30         3      0.800        324.0606
-#2     30         5      0.800        324.7636
-#3     26         3      0.800        325.0434
-#4     28         3      0.800        325.1838
-#5     28         5      0.800        325.5639
-#6     30         7      0.800        325.7180
-#7     26         5      0.800        325.7482
-#8     30         3      0.700        326.0298
-#9     24         3      0.800        326.2729
-#10    28         3      0.700        326.3092
+#1    45         3        0.8         320.4696
+#2    41         3        0.8         320.6417
+#3    43         3        0.8         320.8151
+#4    39         3        0.8         320.9273
+#5    45         5        0.8         321.0673
+#6    35         3        0.8         321.1452
+#7    43         5        0.8         321.2615
+#8    41         5        0.8         321.3123
+#9    39         5        0.8         321.3756
+#10   37         3        0.8         321.3880
 
 
 ## Model 3: Model obtained by hyper-parameter tuning ---------------------------
