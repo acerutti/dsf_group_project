@@ -23,7 +23,7 @@ library(tidyverse)
 D <- read_csv("data_raw.csv", col_names = T)
 
 
-## Resolving Parsing Failures ---------------------------------------------------
+## Resolving Parsing Failures -------------------------------------------------*
 
 # parsing failures
 problems <- problems()
