@@ -81,31 +81,40 @@ keep_for_now <- c("rent_full", "area", "home_type", "GDENAMK", "GDENR", "KTKZ", 
 ###############################################################################*
 # Notes on variables
 ################################################################################*
-# address cannot be used anymore
+# Address and any GPS data is irrelevant
 # area usable is not specified in most cases, use area
+#
 # balcony is unclear: NA comes from not specifying in description or no balcony?
-# cabletv: keep until clear what it is
-# does floors mean on which floor it is?
+# Assumption: Balcony NAs means balcony option was not ticked in listing (however,
+# in our tokenization part, we attempt to extract that information from descr)
+#
+# does floors mean on which floor it is? we delete it because of incoherence
+#
 # what does msregion mean? MSRegion are defined regions by the BFS. Each region
 # is homogeneous. https://www.bfs.admin.ch/bfs/de/home/statistiken/raum-umwelt/nomenklaturen/msreg.assetdetail.415729.html
-
+#
 # newly_built might have the same problem as the apartment features - if it's 
-#         not specified it's not got a 1
-# check if zipcode is PLZ4! They are the same!
+# not specified it has not got a 1 (we delete it)
+#
+# Is zipcode PLZ4? They are the same! Keep only one
 # which(na.omit(D)$zipcode != na.omit(D)$PLZ4)
-# the two columns with wgh_avg_... are identical - only keep one
+#
+# the two columns with wgh_avg_... are identical - however we don't know what 
+# this info refers to -> delete it
+#
+# Some further irrelevant variables which we discussed, we removed
 #
 ###############################################################################*
 
 
 ## FILTERING METHOD APPROACH ------*
-# We filter outliers as defined by the boxplot system. This means we first
-# compute the ranges of admissible results for every amr, and then drop the 
-# observations which are defined as outliers for every amr. Note: we only drop
-# bottom outliers as we have issues with observations with lowest rent_full
+  # We filter outliers as defined by the boxplot system. This means we first
+  # compute the ranges of admissible results for every AMR, and then drop the 
+  # observations which are defined as outliers for every AMR. Note: we only drop
+  # bottom outliers as we have issues with observations with lowest rent_full
 
 
-# Legend of Arbeitsmarktregionen (amr)
+# Legend of Arbeitsmarktregionen (AMR)
 legend <- as_tibble(read.xlsx("legend.xlsx", sheetIndex = 1, header = T))
 legend$MS.Regionen <- as.double(legend$MS.Regionen)
 legend$Arbeitsmarktregionen.2018 <- as.double(legend$Arbeitsmarktregionen.2018)
@@ -786,8 +795,8 @@ ols_1_cv <- train(rent_full ~ .,                    # model to fit
                   trControl = data_ctrl,           # folds
                   method = "lm",                   # specifying regression model
                   na.action = na.pass)      
-rmse_cv <- ols_1_cv$results[["RMSE"]]               # rmse_cv: 363.41
-mae_cv <- ols_1_cv$results[["MAE"]]                 # mae_cv: 249.93
+rmse_cv <- ols_1_cv$results[["RMSE"]]             
+mae_cv <- ols_1_cv$results[["MAE"]]                 
 
 # normal model
 ols_1 <- lm(rent_full ~ ., data = training(split))
@@ -795,10 +804,10 @@ ols_1 <- lm(rent_full ~ ., data = training(split))
 
 # error (validation set approach)
 y_hat <- predict(ols_1, newdata = testing(split))
-mae <- MAE(y_hat, testing(split)$rent_full)          # mae: 244.78
+mae <- MAE(y_hat, testing(split)$rent_full)          
 
 
-mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) # in relation to mean price: 13.97%
+mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full)
 
 ols_results[1,] <- c(1, "OLS", rmse_cv, mae_cv, mae, mae_mean)
 
@@ -825,18 +834,18 @@ ols_2_cv <- train(rent_full ~ .,                    # model to fit
                   trControl = data_ctrl,           # folds
                   method = "lm",                   # specifying regression model
                   na.action = na.pass)      
-rmse_cv <- ols_2_cv$results[["RMSE"]]               # rmse_cv: 478.05
-mae_cv <- ols_2_cv$results[["MAE"]]                 # mae_cv: 333.65
+rmse_cv <- ols_2_cv$results[["RMSE"]]               
+mae_cv <- ols_2_cv$results[["MAE"]]                 
 
 # normal model
 ols_2 <- lm(rent_full ~ ., data = training(split))
 
 # error (validation set approach)
 y_hat <- predict(ols_2, newdata = testing(split))
-mae <- MAE(y_hat, testing(split)$rent_full)       # mae: 332.84
+mae <- MAE(y_hat, testing(split)$rent_full)      
 
 
-mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) # in relation to mean price: 18.96%
+mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full)
 
 ols_results[2,] <- c(2, "OLS", rmse_cv, mae_cv, mae, mae_mean)
 
@@ -860,18 +869,18 @@ ols_3_cv <- train(rent_full ~ .,                    # model to fit
                   trControl = data_ctrl,           # folds
                   method = "lm",                   # specifying regression model
                   na.action = na.pass)      
-rmse_cv <- ols_3_cv$results[["RMSE"]]               # rmse_cv: 371.89
-mae_cv <- ols_3_cv$results[["MAE"]]                 # mae_cv: 256.60
+rmse_cv <- ols_3_cv$results[["RMSE"]]               
+mae_cv <- ols_3_cv$results[["MAE"]]                 
 
 # normal model
 ols_3 <- lm(rent_full ~ ., data = training(split))
 
 # error (validation set approach)
 y_hat <- predict(ols_3, newdata = testing(split))
-mae <- MAE(y_hat, testing(split)$rent_full)         # mae: 256.72
+mae <- MAE(y_hat, testing(split)$rent_full)         
 
 
-mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) # in relation to mean price: 14.69%
+mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full)
 
 ols_results[3,] <- c(3, "OLS", rmse_cv, mae_cv, mae, mae_mean)
 
@@ -897,18 +906,18 @@ ols_4_cv <- train(rent_full ~ .,                    # model to fit
                   trControl = data_ctrl,           # folds
                   method = "lm",                   # specifying regression model
                   na.action = na.pass)      
-rmse_cv <- ols_4_cv$results[["RMSE"]]               # rmse_cv: 362.21
-mae_cv <- ols_4_cv$results[["MAE"]]                 # mae_cv: 249.33
+rmse_cv <- ols_4_cv$results[["RMSE"]]               
+mae_cv <- ols_4_cv$results[["MAE"]]                 
 
 # normal model
 ols_4 <- lm(rent_full ~ ., data = training(split))
 
 # error (validation set approach)
 y_hat <- predict(ols_4, newdata = testing(split))
-mae <- MAE(y_hat, testing(split)$rent_full)         # mae: 248.32
+mae <- MAE(y_hat, testing(split)$rent_full)         
 
 
-mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) # in relation to mean price: 14.12%
+mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) 
 
 ols_results[4,] <- c(4, "OLS", rmse_cv, mae_cv, mae, mae_mean)
 
@@ -939,18 +948,18 @@ ols_5_cv <- train(rent_full ~ .,                    # model to fit
                   trControl = data_ctrl,           # folds
                   method = "lm",                   # specifying regression model
                   na.action = na.pass)      
-rmse_cv <- ols_5_cv$results[["RMSE"]]               # rmse_cv: 357.00
-mae_cv <- ols_5_cv$results[["MAE"]]                 # mae_cv: 245.58
+rmse_cv <- ols_5_cv$results[["RMSE"]]              
+mae_cv <- ols_5_cv$results[["MAE"]]                 
 
 # normal model
 ols_5 <- lm(rent_full ~ ., data = training(split))
 
 # error (validation set approach)
 y_hat <- predict(ols_5, newdata = testing(split))
-mae <- MAE(y_hat, testing(split)$rent_full)         # mae: 249.74
+mae <- MAE(y_hat, testing(split)$rent_full)         
 
 
-mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) # in relation to mean price
+mae_mean <- MAE(y_hat, testing(split)$rent_full)/mean(testing(split)$rent_full) 
 
 ols_results[5,] <- c(5, "OLS", rmse_cv, mae_cv, mae, mae_mean)
 
@@ -1065,8 +1074,8 @@ MAE(predict(rf3, data = Dmod_test)$prediction, Dmod_test$rent_full)
 # Only run this section if you want to replicate the results!
 ###############################################################################*
 
-split <- initial_split(Dmod, prop = 0.8)
-Dmod_train <- analysis(split)
+#split <- initial_split(Dmod, prop = 0.8)
+#Dmod_train <- analysis(split)
 
 # we start with a hyper-parameter grid as introduced in the lecture
 #hyper_grid <- expand.grid(
@@ -1143,6 +1152,31 @@ MAE(predict(rf4, data = Dmod_test)$prediction, Dmod_test$rent_full)
   # MAE is higher than initially obtained random forest. This probably comes 
   # from having a smaller sample size of 0.8 instead of the full sample size
   # as the default randomForest package provides
+
+## Model 4: Model obtained by hyper-parameter tuning with sample size 1 --------
+  # As we ascertained, we also try the predictive performance of the model
+  # with hyper-parameter tuning and with a sample size of 1
+split <- initial_split(Dmod, prop = 0.8)
+Dmod_train <- training(split)
+Dmod_test <- testing(split)
+
+rf5 <- ranger(
+  formula         = rent_full ~ .,
+  data            = Dmod_train,
+  mtry            = 45,
+  min.node.size   = 3,
+  sample.fraction = 1,
+  seed            = 123
+)
+
+rf5$prediction.error                         # oob MSE: 101566.4
+MAE(predict(rf5, data = Dmod_test)$prediction, Dmod_test$rent_full)
+# MAE: 216.43
+
+
+
+
+
 
 
 ###############################################################################*
