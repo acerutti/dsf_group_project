@@ -1027,8 +1027,9 @@ set.seed(123)
 ### parameter tuning for that model
 ###############################################################################*
 
-rf_results <- data.frame(matrix(ncol = 6, nrow = 5))
-names(rf_results) <- c("model_nr", "model_type", "oob_rmse", "oob_mse", "mae", "mae/mean")
+# statistics for model comparison
+rf_results <- data.frame(matrix(ncol = 7, nrow = 5))
+names(rf_results) <- c("model_nr", "model_type", "oob_rmse", "oob_mse", "mae", "mae/mean", "time")
 
 ## Model 1: All variables, vanilla attempt -------------------------------------
 
@@ -1042,12 +1043,18 @@ Dmod_test <- assessment(split)
 # we use randomForest package as first result to plot oob errors vs. no. trees
 # Note: randomForest parameters: 
 # mtry = p/3, sample = nrow(Dmod), ntree = 500, node size = 5
+
+start <- Sys.time() # for measuring training time - get the start time
 rf1 <- randomForest(
   formula = rent_full ~ .,
   data    = Dmod_train
 )
+fin <- Sys.time() # end time
+time <- parse_number(as.character(difftime(fin, start, units = "mins")))
 
+pdf("oob_errors.pdf")
 plot(rf1)                             # plot oob errors vs. no. of trees:
+dev.off()
 # after some time mse doesn't improve
 # by much
 
@@ -1058,7 +1065,7 @@ y_hat <- predict(rf1, Dmod_test)
 mae <- MAE(y_hat, Dmod_test$rent_full)       
 mae_mean <- mae/mean(Dmod_test$rent_full)
 
-rf_results[1,] <- c(1, "RF", oob_rmse, oob_mse, mae, mae_mean)
+rf_results[1,] <- c(1, "RF", oob_rmse, oob_mse, mae, mae_mean, time)
 
 
 ## Model 2: Selected Variables (same variables as ols model 2) -----------------
@@ -1074,12 +1081,15 @@ split <- initial_split(
 Dmod_train <- training(split)
 Dmod_test <- testing(split)
 
+start <- Sys.time() # for measuring training time - get the start time
 rf2 <- ranger(
   formula       = rent_full ~ .,
   data          = Dmod_train,
   mtry          = 4,                # p/3 as in prev. model
   min.node.size = 5
 )
+fin <- Sys.time() # end time
+time <- parse_number(as.character(difftime(fin, start, units = "mins")))
 
 oob_mse <- rf2$prediction.error     # oob mse: 157119
 oob_rmse <- sqrt(oob_mse)
@@ -1088,7 +1098,7 @@ mae <- MAE(predict(rf2, data = Dmod_test)$prediction, Dmod_test$rent_full)
 # MAE: 271.66 (better than ols: 332.84)
 mae_mean <- mae/mean(Dmod_test$rent_full)
 
-rf_results[2,] <- c(2, "RF", oob_rmse, oob_mse, mae, mae_mean)
+rf_results[2,] <- c(2, "RF", oob_rmse, oob_mse, mae, mae_mean, time)
 
 
 
@@ -1106,12 +1116,15 @@ split <- initial_split(
 Dmod_train <- training(split)
 Dmod_test <- testing(split)
 
+start <- Sys.time() # for measuring training time - get the start time
 rf3 <- ranger(
   formula       = rent_full ~ .,
   data          = Dmod_train,
   mtry          = 33,                # p/3 as in prev. model
   min.node.size = 5
 )
+fin <- Sys.time()
+time <- parse_number(as.character(difftime(fin, start, units = "mins")))
 
 oob_mse <- rf3$prediction.error
 oob_rmse <- sqrt(oob_mse)
@@ -1120,7 +1133,7 @@ mae <- MAE(predict(rf3, data = Dmod_test)$prediction, Dmod_test$rent_full)
 
 mae_mean <- mae/mean(Dmod_test$rent_full)
 
-rf_results[3,] <- c(3, "RF", oob_rmse, oob_mse, mae, mae_mean)
+rf_results[3,] <- c(3, "RF", oob_rmse, oob_mse, mae, mae_mean, time)
 
 
 ###############################################################################*
@@ -1197,6 +1210,7 @@ split <- initial_split(Dmod, prop = 0.8)
 Dmod_train <- training(split)
 Dmod_test <- testing(split)
 
+start <- Sys.time() # for measuring training time - get the start time
 rf4 <- ranger(
   formula         = rent_full ~ .,
   data            = Dmod_train,
@@ -1205,6 +1219,8 @@ rf4 <- ranger(
   sample.fraction = 0.8,
   seed            = 123
 )
+fin <- Sys.time()
+time <- parse_number(as.character(difftime(fin, start, units = "mins")))
 
 oob_mse <- rf4$prediction.error 
 oob_rmse <- sqrt(oob_mse)
@@ -1216,7 +1232,7 @@ mae_mean <- mae/mean(Dmod_test$rent_full)
   # from having a smaller sample size of 0.8 instead of the full sample size
   # as the default randomForest package provides
 
-rf_results[4,] <- c(4, "RF", oob_rmse, oob_mse, mae, mae_mean)
+rf_results[4,] <- c(4, "RF", oob_rmse, oob_mse, mae, mae_mean, time)
 
 
 ## Model 5: Model obtained by hyper-parameter tuning with sample size 1 --------
@@ -1226,6 +1242,7 @@ split <- initial_split(Dmod, prop = 0.8)
 Dmod_train <- training(split)
 Dmod_test <- testing(split)
 
+start <- Sys.time() # for measuring training time - get the start time
 rf5 <- ranger(
   formula         = rent_full ~ .,
   data            = Dmod_train,
@@ -1234,6 +1251,8 @@ rf5 <- ranger(
   sample.fraction = 1,
   seed            = 123
 )
+fin <- Sys.time()
+time <- parse_number(as.character(difftime(fin, start, units = "mins")))
 
 oob_mse <- rf5$prediction.error
 oob_rmse <- sqrt(oob_mse)
@@ -1242,10 +1261,11 @@ mae <- MAE(predict(rf5, data = Dmod_test)$prediction, Dmod_test$rent_full)
 mae_mean <- mae/mean(Dmod_test$rent_full)
 
 
-rf_results[5,] <- c(5, "RF", oob_rmse, oob_mse, mae, mae_mean)
+rf_results[5,] <- c(5, "RF", oob_rmse, oob_mse, mae, mae_mean, time)
 
 
-
+write_csv(rf_results, "rf_results.csv")
+write_csv(ols_results, "ols_results.csv")
 ###############################################################################*
 ## Boosted Trees --------------------------------------------------------------
 ###############################################################################*
