@@ -1138,7 +1138,7 @@ names(rf_results) <- c("model_nr", "model_type", "oob_rmse", "oob_mse", "mae", "
 ## Model 1: All variables, vanilla attempt -------------------------------------
 
 # Note: we first try a normal "vanilla" random forest with randomForest
-# package. It should serve as a general benchmark on what follows
+# package. It should serve as a general benchmark for what follows
 
 split <- initial_split(Dmod, prop = 0.8) 
 Dmod_train <- analysis(split)
@@ -1146,7 +1146,7 @@ Dmod_test <- assessment(split)
 
 # we use randomForest package as first result to plot oob errors vs. no. trees
 # Note: randomForest parameters: 
-# mtry = p/3, sample = nrow(Dmod), ntree = 500, node size = 5
+# mtry = p/3 (40), sample = nrow(Dmod), ntree = 500, node size = 5
 
 start <- Sys.time() # for measuring training time - get the start time
 rf1 <- randomForest(
@@ -1368,6 +1368,13 @@ mae_mean <- mae/mean(Dmod_test$rent_full)
 rf_results[5,] <- c(5, "RF", oob_rmse, oob_mse, mae, mae_mean, time)
 
 
+# some data frame operations for a nice table in the report
+rf_results[,6:10] = apply(rf_results[,6:10], 2, function(x) as.numeric(x))
+rf_results$mae_of_mean <- rf_results$mae_of_mean*100
+rf_results <- data.frame(lapply(rf_results, function(y) if(is.numeric(y)) round(y, 2) else y)) 
+rf_results$mae_of_mean <- rf_ressults$mae_of_mean/100
+
+# save both results for now
 write_csv(rf_results, "rf_results.csv")
 write_csv(ols_results, "ols_results.csv")
 
