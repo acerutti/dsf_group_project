@@ -1,0 +1,11 @@
+﻿model_type,model_nr,vars
+OLS,1,"area, rooms, apartment types, furnished (yes/no), micro ratings, balcony (yes/no), distances to places of interest, arbeitsmarktregionen"
+OLS,2,"area, rooms, furnished (yes/no), balcony (yes/no), micro ratings, distances to places of interest"
+OLS,3,"area, rooms, general micro rating, arbeitsmarktregionen"
+OLS,4,"area, area squared, rooms, rooms squared, apartment types, furnished (yes/no), micro ratings, balcony (yes/no), distances to places of interest, arbeitsmarktregionen"
+OLS,5,"area, rooms, apartment types, furnished (yes/no), micro ratings, balcony (yes/no), distances to places of interest, arbeitsmarktregionen, cantons, arbeitsmarktgrossregionen"
+RF,1,same as OLS model 1
+RF,2,same as OLS model 2
+RF,3,same as OLS model 3
+RF,4,same as RF model 1
+RF,5,same as RF model 1
