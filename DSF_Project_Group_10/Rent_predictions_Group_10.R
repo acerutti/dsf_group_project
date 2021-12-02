@@ -1508,6 +1508,9 @@ vip::vip(gbm.fit)
 
 
 
+
+
+
 ## Model 1: All variables, vanilla attempt -------------------------------------
 # Set up data frame where we can push all results of all models to
 boosting_result <- data.frame(matrix(ncol = 10, nrow = 5))
@@ -1917,3 +1920,10 @@ mae_pred_mean <- caret::MAE(pred, Dmod_test$rent_full)/mean(Dmod_test$rent_full)
 boosting_result[5, ] <- c(model_type, n.trees, interaction.depth, shrinkage, 
                           cv.folds, training_time, rmse_training, rmse_prediction,
                           mae_prediction, mae_pred_mean)
+
+
+
+##Save the results after each model in csv  -----------------------------*
+
+# Save the data frame 
+# write.csv(boosting_result,"data/boosting_result.csv", row.names = FALSE)
