@@ -23,7 +23,6 @@ library(xlsx)
 library(tidyverse)
 
 # Tokenization
-
 library(tidytext)
 library(textdata)
 
@@ -32,7 +31,6 @@ library(vtable)
 library(qwraps2)
 
 # OLS
-
 library(caret)              # cross-validation etc.
 library(rsample)            # data partitions
 library(ranger)             # random forests
