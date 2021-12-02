@@ -1374,6 +1374,11 @@ rf_results$mae_of_mean <- rf_results$mae_of_mean*100
 rf_results <- data.frame(lapply(rf_results, function(y) if(is.numeric(y)) round(y, 2) else y)) 
 rf_results$mae_of_mean <- rf_ressults$mae_of_mean/100
 
+ols_results[,3:6] = apply(ols_results[,3:6], 2, function(x) as.numeric(x))
+ols_results$mae_of_mean <- ols_results$mae_of_mean*100
+ols_results <- data.frame(lapply(ols_results, function(y) if(is.numeric(y)) round(y, 2) else y)) 
+ols_results$mae_of_mean <- ols_results$mae_of_mean/100
+
 # save both results for now
 write_csv(rf_results, "rf_results.csv")
 write_csv(ols_results, "ols_results.csv")
