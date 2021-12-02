@@ -970,7 +970,7 @@ ols_results[4,] <- c(4, "OLS", rmse_cv, mae_cv, mae, mae_mean)
 
 
 
-## Model 5: all variables including cantons, etc" ------------------------------
+## Model 5: all variables including cantons, etc ------------------------------
 
 # Vars used: area, rooms, apartment types, furnished (yes/no), micro ratings,
 # balcony (yes/no), distances to places of interest, arbeitsmarktregionen,
@@ -1260,7 +1260,21 @@ rf_results[5,] <- c(5, "RF", oob_rmse, oob_mse, mae, mae_mean)
 
 ###############################################################################*
 
-## Training  ------------------------------------------------------
+
+
+
+
+## Model 0: Manual parameter tuning -------------------------------------------
+
+# create data frame where we can store the result for each tests of our manual tuning
+hyperparameter_results <- data.frame(matrix(ncol = 10, nrow = 20))
+names(hyperparameter_results) <- c( "model",  "n.trees", "interaction.depth", "shrinkage",
+                              "cv.folds", "min_training_time", "rmse_training", 
+                              "rmse_prediction", "mae_prediction", "mae_pred_mean")
+
+
+
+## Training for finding of the best hyperparameters  --------------------------*
 # Create training (80%) and test (20%) 
 # Use set.seed for reproducibility (already done it the upper part)
 
@@ -1269,12 +1283,16 @@ Dmod_train <- training(Dmod_split)
 Dmod_test  <- testing(Dmod_split)
 
 # Setting the parameters
-# Change here the variable for the training
+# we changed here the hyperparameters manually for each test. 
+# In the report we mentioned 12 tests, however we did not write 12 times the same
+# code but simply changed the variables down here and stored the results. 
+
+# Change here the variables for the training
 model_type <- "gbm"
-n.trees <- 3200
-interaction.depth <- 5 #maximum depth of variable interactions
+n.trees <- 600
 shrinkage <- 0.1 #similar as learning rate
-cv.folds <-  10 # cross validation
+interaction.depth <- 6 #maximum depth of variable interactions
+cv.folds <-  5 # cross validation
 
 # for measuring training time - get the start time
 start_time <- Sys.time() 
@@ -1297,10 +1315,188 @@ end_time <- Sys.time()
 end_time - start_time # calculate the length of the training - appears in the console
 
 training_time <- difftime(end_time, start_time, units = "mins") #save the training time
-# training_time: 53.05 min
+
 
 # print results
 print(gbm.fit)
+# The best cross-validation iteration was 3149. 
+# There were 119 predictors of which 114 had non-zero influence.
+
+# get MSE and compute RMSE
+rmse_training <- sqrt(min(gbm.fit$cv.error))
+
+
+## Predicting -----------------------------------------------------------------*
+# predict values for test data
+pred <- predict(gbm.fit, n.trees = gbm.fit$n.trees, Dmod_test)
+
+
+## Assessing Performance of the model -----------------------------------------*
+# RMSE
+rmse_prediction <- caret::RMSE(pred, Dmod_test$rent_full) 
+
+# mae_prediction
+mae_prediction <- caret::MAE(pred, Dmod_test$rent_full) 
+
+
+# MAE/MEAN
+mae_pred_mean <- caret::MAE(pred, Dmod_test$rent_full)/mean(Dmod_test$rent_full)
+
+
+
+##Save the results after each iteration to table  -----------------------------*
+## Always change the number of the row when saving the results of a new set of parameters 
+# and the training. At the moment it is comment out because we set the best parameters already
+# at the beginning. 
+
+# hyperparameter_results[12, ] <- c(model_type, n.trees, interaction.depth, shrinkage, 
+                          # cv.folds, training_time, rmse_training, rmse_prediction,
+                          # mae_prediction, mae_pred_mean)
+
+
+# Omit all the rows that are not filled 
+# hyperparameter_results <- na.omit(hyperparameter_results)
+
+# Save the data frame 
+# write.csv(hyperparameter_results,"data/hyperparameter_results.csv", row.names = FALSE)
+
+
+## Plots  ---------------------------------------------------------------------*
+# plot loss function as a result of n trees added to the ensemble
+gbm.perf(gbm.fit, method = "cv")
+
+# plot for showing the importance of each variable
+vip::vip(gbm.fit)
+
+
+
+## Model 1: All variables, vanilla attempt -------------------------------------
+# Set up data frame where we can push all results of all models to
+boosting_result <- data.frame(matrix(ncol = 10, nrow = 5))
+names(boosting_result) <- c( "model",  "n.trees", "interaction.depth", "shrinkage",
+                              "cv.folds", "min_training_time", "rmse_training", 
+                              "rmse_prediction", "mae_prediction", "mae_pred_mean")
+
+# Training --------------------------------------------------------------------*
+
+Dmod_split <- initial_split(Dmod, prop = .8)
+Dmod_train <- training(Dmod_split)
+Dmod_test  <- testing(Dmod_split)
+
+# Setting the parameters
+# Change here the variable for the training
+model_type <- "gbm - model 1"
+n.trees <- 600
+shrinkage <- 0.1 #similar as learning rate
+interaction.depth <- 6 #maximum depth of variable interactions
+cv.folds <-  5 # cross validation
+
+# for measuring training time - get the start time
+start_time <- Sys.time() 
+
+# fitting of the model
+gbm.fit <- gbm(
+  formula = rent_full ~ .,
+  distribution = "gaussian",
+  data = Dmod_train,
+  n.trees = n.trees,
+  interaction.depth = interaction.depth, 
+  shrinkage = shrinkage, 
+  cv.folds = cv.folds,
+  n.cores = NULL, # will use all cores by default
+  verbose = FALSE
+)  
+
+# get the end time
+end_time <- Sys.time() 
+end_time - start_time # calculate the length of the training - appears in the console
+
+training_time <- difftime(end_time, start_time, units = "mins") #save the training time
+
+
+# print results
+print(gbm.fit)
+# The best cross-validation iteration was 600. 
+# There were 119 predictors of which 97 had non-zero influence.
+
+# get MSE and compute RMSE
+rmse_training <- sqrt(min(gbm.fit$cv.error)) # rmse_training: 321.408884619267
+
+
+## Predicting -----------------------------------------------------------------*
+# predict values for test data
+pred <- predict(gbm.fit, n.trees = gbm.fit$n.trees, Dmod_test)
+
+
+
+## Assessing Performance of the model -----------------------------------------*
+# RMSE
+rmse_prediction <- caret::RMSE(pred, Dmod_test$rent_full) 
+
+# mae_prediction
+mae_prediction <- caret::MAE(pred, Dmod_test$rent_full) 
+
+
+# MAE/MEAN
+mae_pred_mean <- caret::MAE(pred, Dmod_test$rent_full)/mean(Dmod_test$rent_full)
+
+
+
+##Save the results to table  --------------------------------------------------*
+boosting_result[1, ] <- c(model_type, n.trees, interaction.depth, shrinkage, 
+                          cv.folds, training_time, rmse_training, rmse_prediction,
+                          mae_prediction, mae_pred_mean)
+
+
+
+## Model 2: Selected Variables (same variables as ols model 2) -----------------
+
+# Vars used: area, rooms, furnished (yes/no), balcony (yes/no), micro ratings,
+# distances to places of interest
+split <- initial_split(
+  Dmod %>%
+    select(rent_full, area, rooms, furnished, balcony, 
+           dplyr::starts_with("micro"), dplyr::starts_with("dist")),
+  prop = 0.8
+)
+Dmod_train <- training(split)
+Dmod_test <- testing(split)
+
+
+# Setting the parameters
+# Change here the variable for the training
+model_type <- "gbm - model 2"
+n.trees <- 600
+shrinkage <- 0.1 #similar as learning rate
+interaction.depth <- 6 #maximum depth of variable interactions
+cv.folds <-  5 # cross validation
+
+# for measuring training time - get the start time
+start_time <- Sys.time() 
+
+# fitting of the model
+gbm.fit <- gbm(
+  formula = rent_full ~ .,
+  distribution = "gaussian",
+  data = Dmod_train,
+  n.trees = n.trees,
+  interaction.depth = interaction.depth, 
+  shrinkage = shrinkage, 
+  cv.folds = cv.folds,
+  n.cores = NULL, # will use all cores by default
+  verbose = FALSE
+)  
+
+# get the end time
+end_time <- Sys.time() 
+end_time - start_time # calculate the length of the training - appears in the console
+
+training_time <- difftime(end_time, start_time, units = "mins") #save the training time
+
+
+# print results
+print(gbm.fit)
+# 
 
 # get MSE and compute RMSE
 rmse_training <- sqrt(min(gbm.fit$cv.error))
@@ -1314,37 +1510,272 @@ pred <- predict(gbm.fit, n.trees = gbm.fit$n.trees, Dmod_test)
 
 ## Assessing Performance of the model -----------------------------------------*
 # RMSE
-rmse_prediction <- caret::RMSE(pred, Dmod_test$rent_full) #rmse_prediction: 308.49
+rmse_prediction <- caret::RMSE(pred, Dmod_test$rent_full) 
 
 # mae_prediction
-mae_prediction <- caret::MAE(pred, Dmod_test$rent_full) #mae_prediction: 208.13
+mae_prediction <- caret::MAE(pred, Dmod_test$rent_full) 
 
 
 # MAE/MEAN
 mae_pred_mean <- caret::MAE(pred, Dmod_test$rent_full)/mean(Dmod_test$rent_full)
-#mae_pred_mean: 0.12
 
 
-##Save the results after each iteration to table  -----------------------------*
-## Always change the number of the row when saving the results of a new set of parameters 
-# and the training. At the moment it is comment out because we set the best parameters already
-# at the beginning. 
 
-#boosting_results[1, ] <- c(model_type, n.trees, interaction.depth, shrinkage, 
-#cv.folds, training_time, rmse_training, rmse_prediction,
-#mae_prediction, mae_pred_mean)
+##Save the results to table  --------------------------------------------------*
+boosting_result[2, ] <- c(model_type, n.trees, interaction.depth, shrinkage, 
+                          cv.folds, training_time, rmse_training, rmse_prediction,
+                          mae_prediction, mae_pred_mean)
 
 
-# Omit all the rows that are not filled 
-# boosting_results <- na.omit(boosting_results)
 
-# Save the data frame 
-# write.csv(boosting_results,"data/boosting_results.csv", row.names = FALSE)
+## Model 3: Selected Variables (same variables as ols model 3) -----------------
+
+# Vars used: area, rooms, general micro rating, arbeitsmarktregionen
+# Note: we use the ranger package for further models due to its faster
+# implementation. Parameters remain the same as for the default vanilla 
+# approach at the beginning
+split <- initial_split(
+  Dmod %>%
+    select(rent_full, area, rooms, micro_rating_new, dplyr::starts_with("label")),
+  prop = 0.8
+)
+Dmod_train <- training(split)
+Dmod_test <- testing(split)
+
+## Training  ------------------------------------------------------------------*
+# Setting the parameters
+# Change here the variable for the training
+model_type <- "gbm - model 3"
+n.trees <- 600
+shrinkage <- 0.1 #similar as learning rate
+interaction.depth <- 6 #maximum depth of variable interactions
+cv.folds <-  5 # cross validation
+
+# for measuring training time - get the start time
+start_time <- Sys.time() 
+
+# fitting of the model
+gbm.fit <- gbm(
+  formula = rent_full ~ .,
+  distribution = "gaussian",
+  data = Dmod_train,
+  n.trees = n.trees,
+  interaction.depth = interaction.depth, 
+  shrinkage = shrinkage, 
+  cv.folds = cv.folds,
+  n.cores = NULL, # will use all cores by default
+  verbose = FALSE
+)  
+
+# get the end time
+end_time <- Sys.time() 
+end_time - start_time # calculate the length of the training - appears in the console
+# Time difference of 5.920291 mins
+
+training_time <- difftime(end_time, start_time, units = "mins") #save the training time
 
 
-## Plots  ---------------------------------------------------------------------*
-# plot loss function as a result of n trees added to the ensemble
-gbm.perf(gbm.fit, method = "cv")
+# print results
+print(gbm.fit)
+# A gradient boosted model with gaussian loss function. 600 iterations were performed.
+# The best cross-validation iteration was 591.
+# There were 101 predictors of which 93 had non-zero influence.
 
-# plot for showing the importance of each variable
-vip::vip(gbm.fit)
+# get MSE and compute RMSE
+rmse_training <- sqrt(min(gbm.fit$cv.error))
+# rmse_training: 338.465
+
+## Predicting -----------------------------------------------------------------*
+# predict values for test data
+pred <- predict(gbm.fit, n.trees = gbm.fit$n.trees, Dmod_test)
+
+
+
+## Assessing Performance of the model -----------------------------------------*
+# RMSE
+rmse_prediction <- caret::RMSE(pred, Dmod_test$rent_full) 
+# rmse_prediction: 341.0365
+
+# mae_prediction
+mae_prediction <- caret::MAE(pred, Dmod_test$rent_full) 
+# mae_prediction: 232.5631
+
+# MAE/MEAN
+mae_pred_mean <- caret::MAE(pred, Dmod_test$rent_full)/mean(Dmod_test$rent_full)
+# mae_pred_mean: 0.1320951
+
+
+##Save the results to table  --------------------------------------------------*
+boosting_result[3, ] <- c(model_type, n.trees, interaction.depth, shrinkage, 
+                          cv.folds, training_time, rmse_training, rmse_prediction,
+                          mae_prediction, mae_pred_mean)
+
+
+
+## Model 4: "squared variables" ------------------------------------------------
+
+# Vars used: area, area squared, rooms, rooms squared, apartment types, 
+# furnished (yes/no), micro ratings,
+# balcony (yes/no), distances to places of interest, arbeitsmarktregionen
+
+split <- initial_split(
+  Dmod %>%
+    mutate(area_sq = area^2) %>%
+    mutate(rooms_sq = rooms^2)
+)
+
+Dmod_train <- training(split)
+Dmod_test <- testing(split)
+
+## Training  ------------------------------------------------------------------*
+# Setting the parameters
+# Change here the variable for the training
+model_type <- "gbm - model 4"
+n.trees <- 600
+shrinkage <- 0.1 #similar as learning rate
+interaction.depth <- 6 #maximum depth of variable interactions
+cv.folds <-  5 # cross validation
+
+# for measuring training time - get the start time
+start_time <- Sys.time() 
+
+# fitting of the model
+gbm.fit <- gbm(
+  formula = rent_full ~ .,
+  distribution = "gaussian",
+  data = Dmod_train,
+  n.trees = n.trees,
+  interaction.depth = interaction.depth, 
+  shrinkage = shrinkage, 
+  cv.folds = cv.folds,
+  n.cores = NULL, # will use all cores by default
+  verbose = FALSE
+)  
+
+# get the end time
+end_time <- Sys.time() 
+end_time - start_time # calculate the length of the training - appears in the console
+# Time difference of 6.843948 mins
+
+training_time <- difftime(end_time, start_time, units = "mins") #save the training time
+
+
+# print results
+print(gbm.fit)
+# A gradient boosted model with gaussian loss function. 600 iterations were performed.
+# The best cross-validation iteration was 600. There were 121 predictors of which 
+# 97 had non-zero influence.
+
+# get MSE and compute RMSE
+rmse_training <- sqrt(min(gbm.fit$cv.error))
+# rmse_training: 320.0584
+
+## Predicting -----------------------------------------------------------------*
+# predict values for test data
+pred <- predict(gbm.fit, n.trees = gbm.fit$n.trees, Dmod_test)
+
+
+
+## Assessing Performance of the model -----------------------------------------*
+# RMSE
+rmse_prediction <- caret::RMSE(pred, Dmod_test$rent_full) 
+# rmse_prediction: 318.4705
+
+# mae_prediction
+mae_prediction <- caret::MAE(pred, Dmod_test$rent_full) 
+# mae_prediction: 216.4146
+
+# MAE/MEAN
+mae_pred_mean <- caret::MAE(pred, Dmod_test$rent_full)/mean(Dmod_test$rent_full)
+# mae_pred_mean: 0.1231721
+
+
+##Save the results to table  --------------------------------------------------*
+boosting_result[4, ] <- c(model_type, n.trees, interaction.depth, shrinkage, 
+                          cv.folds, training_time, rmse_training, rmse_prediction,
+                          mae_prediction, mae_pred_mean)
+
+
+
+## Model 5: all variables including cantons, etc--------------------------------
+
+# Vars used: area, rooms, apartment types, furnished (yes/no), micro ratings,
+# balcony (yes/no), distances to places of interest, arbeitsmarktregionen,
+# cantons, arbeitsmarktgrossregionen
+
+split <- initial_split(
+  data_analyzed %>%
+    select(all_of(modelling_vars), 
+           dplyr::starts_with("dist"),
+           dplyr::starts_with("Micro"), 
+           KTKZ, 
+           Arbeitsmarktgrossregionen.2018) %>%
+    drop_na()
+)
+
+## Training  ------------------------------------------------------------------*
+# Setting the parameters
+# Change here the variable for the training
+model_type <- "gbm - model 5"
+n.trees <- 600
+shrinkage <- 0.1 #similar as learning rate
+interaction.depth <- 6 #maximum depth of variable interactions
+cv.folds <-  5 # cross validation
+
+# for measuring training time - get the start time
+start_time <- Sys.time() 
+
+# fitting of the model
+gbm.fit <- gbm(
+  formula = rent_full ~ .,
+  distribution = "gaussian",
+  data = Dmod_train,
+  n.trees = n.trees,
+  interaction.depth = interaction.depth, 
+  shrinkage = shrinkage, 
+  cv.folds = cv.folds,
+  n.cores = NULL, # will use all cores by default
+  verbose = FALSE
+)  
+
+# get the end time
+end_time <- Sys.time() 
+end_time - start_time # calculate the length of the training - appears in the console
+# Time difference of 6.898528 mins
+
+training_time <- difftime(end_time, start_time, units = "mins") #save the training time
+
+
+# print results
+print(gbm.fit)
+# A gradient boosted model with gaussian loss function.600 iterations were performed.
+# The best cross-validation iteration was 600. There were 121 predictors of which 
+# 99 had non-zero influence
+
+# get MSE and compute RMSE
+rmse_training <- sqrt(min(gbm.fit$cv.error))
+# rmse_training: 320.319
+
+## Predicting -----------------------------------------------------------------*
+# predict values for test data
+pred <- predict(gbm.fit, n.trees = gbm.fit$n.trees, Dmod_test)
+
+
+## Assessing Performance of the model -----------------------------------------*
+# RMSE
+rmse_prediction <- caret::RMSE(pred, Dmod_test$rent_full) 
+# rmse_prediction: 317.5295
+
+# mae_prediction
+mae_prediction <- caret::MAE(pred, Dmod_test$rent_full) 
+# mae_prediction: 215.7215
+
+# MAE/MEAN
+mae_pred_mean <- caret::MAE(pred, Dmod_test$rent_full)/mean(Dmod_test$rent_full)
+# mae_pred_mean: 0.1227776
+
+
+##Save the results to table  --------------------------------------------------*
+boosting_result[5, ] <- c(model_type, n.trees, interaction.depth, shrinkage, 
+                          cv.folds, training_time, rmse_training, rmse_prediction,
+                          mae_prediction, mae_pred_mean)
