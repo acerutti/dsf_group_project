@@ -488,7 +488,7 @@ results <- tibble(values = c(nrow(balcony_appartments), nrow(furnished_appartmen
 
 # Plot to visualize results
 ggplot(data=results, aes(x=object, y=values)) +
-  geom_bar(stat="identity") +
+  geom_bar(stat="identity", fill = "coral", alpha = 0.7) +
   labs(title = "New observations obtained through text analysis", 
        y = "Number of observations",
        x = "Apartment features") +
