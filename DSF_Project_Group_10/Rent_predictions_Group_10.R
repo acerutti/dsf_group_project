@@ -156,7 +156,7 @@ data_analyzed[,c("balcony", "furnished")] = apply(data_analyzed[,c("balcony", "f
 rm(list = setdiff(ls(), c("D", "data_analyzed", "problems")))
 
 
-### TOKENIZATION----------------------------------------------------------------
+### TEXT ANALYSIS --------------------------------------------------------------
 
 # In this section, we want to improve our data sets by looking if we can find values
 # in the appartment description (variable "descr") that were not captured in their
