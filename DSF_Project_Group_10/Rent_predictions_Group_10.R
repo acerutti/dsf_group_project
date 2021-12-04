@@ -815,7 +815,6 @@ ggplot(avg_rent_per_room_size) + geom_point(aes(x = rooms, y = avg_rent_rooms)) 
 
 ## 2.6 Relationship between flat size and building year
 
-lapply(data_analyzed, function(x) table(is.na(x)))
 
   # Flat size depending on building year (full time period)
 
