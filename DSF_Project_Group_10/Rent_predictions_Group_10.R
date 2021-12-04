@@ -564,7 +564,7 @@ flats_per_size$flat_category <- factor(flats_per_size$flat_category ,
 ggplot(data = flats_per_size, aes(x=flat_category, y = number_of_flats)) + geom_bar(stat = "identity", color ="black", fill = "darkblue") + labs(title = "Flat offerings in 2019 depending on flat size",
                                                                                                                                               x = "Flat size category",
                                                                                                                                               y = "Number of flat offerings")  +
-  theme_bw()
+  theme_bw(base_size = 20) 
 
 
 #  Flat type and size depending on number of rooms
@@ -578,7 +578,7 @@ ggplot(aes(x = rooms, y = area, col = home_type)) +
   labs(title ="Flat size (area) depending on number of rooms by hometype",
        x = "Number of rooms",
        y = "Flat size (area)") +
-  theme_bw()
+  theme_bw(base_size = 20)
 
 
   # Number of flats offered depending on cantons
@@ -587,7 +587,7 @@ flats_canton <- data_analyzed %>% select(KTKZ) %>% mutate(flat = 1)
 ggplot(data = flats_canton, aes(x=KTKZ, y = flat)) + geom_bar(stat = "identity", color ="darkblue") + labs(title = "Flat offerings per canton",
                                                                                                        x = "Canton",
                                                                                                        y = "Number of flat offerings") +
-  theme_bw()
+  theme_bw(base_size = 20)
 
 
 ## 2.2 Rent price (full / per m2) depending on area ----------------------------
@@ -601,7 +601,7 @@ ggplot(data_analyzed, aes(x = area, y = rent_full)) +
   labs(title ="Rent price depending on flat size (area)",
        x = "Flat size (area)",
        y = "Rent price (full)") +
-  theme_bw()
+  theme_bw(base_size = 20)
 
   # Rent price full depending on area differed by canton
 
@@ -612,7 +612,7 @@ ggplot(data_analyzed, aes(x = area, y = rent_full, col = KTKZ)) +
   labs(title ="Rent price depending on flat size (area) by canton",
        x = "Flat size",
        y = "Rent price (full)") +
-  theme_bw()
+  theme_bw(base_size = 20)
 
   # Rent price per m2 depending on area 
 
@@ -623,7 +623,7 @@ ggplot(data_analyzed, aes(x = area, y = rent_m2)) +
   labs(title ="Rent price per m2 depending on flat size (area)",
        x = "Flat size",
        y = "Rent price per m2")  +
-  theme_bw()
+  theme_bw(base_size = 20)
 
   # Rent price per m2 depending on area differed per canton
 
@@ -634,7 +634,7 @@ ggplot(data_analyzed, aes(x = area, y = rent_m2, col = KTKZ)) +
   labs(title ="Rent price per m2 depending on flat size (area) by canton",
        x = "Flat size",
        y = "Rent price per m2")  +
-  theme_bw()
+  theme_bw(base_size = 20)
 
 
 ## 2.3 Average rents depending on region -------------------------
@@ -652,7 +652,7 @@ ggplot(avg_rent_per_canton) + geom_point(aes(x = reorder(KTKZ, -avg_cantonal_ren
   labs(title ="Average rent price (full) per canton",
        x = "Canton",
        y = "Average rent price (full)") +
-  theme_bw()
+  theme_bw(base_size = 20)
 
 
   # Average rent full per Arbeitsmarktgrossregion
@@ -668,7 +668,7 @@ ggplot(avg_rent_per_Arbeitsmarktgrossregion) + geom_point(aes(x = reorder(Arbeit
   labs(title ="Average rent price (full) per Arbeitsmarktgrossregion",
        x = "Arbeitsmarktgrossregion",
        y = "Average rent price (full)")+
-  theme_bw()
+  theme_bw(base_size = 20)
 
 
   # Average rent per m2 per canton
@@ -684,7 +684,7 @@ ggplot(avg_rent_m2_per_canton) + geom_point(aes(x = reorder(KTKZ, -avg_cantonal_
   labs(title ="Average rent price per m2 per canton",
        x = "Canton",
        y = "Average rent price per m2")+
-  theme_bw()
+  theme_bw(base_size = 20)
 
 
   # Average rent per m2 per Arbeitsmarktgrossregion
@@ -699,7 +699,7 @@ ggplot(avg_rent_m2_per_Arbeitsmarktgrossregion) + geom_point(aes(x = reorder(Arb
   labs(title ="Average rent price per m2 per Arbeitsmarktgrossregion",
        x = "Arbeitsmarktgrossregion",
        y = "Average rent per m2") +
-  theme_bw()
+  theme_bw(base_size = 20)
 
 
 ## 2.4 Average rents depending on micro rating new ----------------------------
@@ -732,7 +732,7 @@ ggplot(rent_per_micro_rating) + geom_point(aes(x = micro_rating_cluster, y = avg
   labs(title ="Average rent depending on micro rating new (rounded)",
        x = "Micro Rating New (rounded)",
        y = "Average rent price (full)") +
-  theme_bw()
+  theme_bw(base_size = 20)
 
 
   # Rent price per m2 depending on micro rating new
@@ -764,7 +764,7 @@ ggplot(rent_m2_per_micro_rating) + geom_point(aes(x = micro_rating_cluster, y = 
   labs(title ="Average rent price per m2 depending on micro rating new (rounded)",
        x = "Micro Rating New (rounded)",
        y = "Average rent price per m2") +
-  theme_bw()
+  theme_bw(base_size = 20)
 
 
 
@@ -781,7 +781,7 @@ ggplot(rent_balcony) + geom_line(aes(x = balcony, y = avg_rent)) +
   labs(title ="Average rent price (full) depending on balcony",
        x = "Balcony",
        y = "Average rent price (full)") +
-  theme_bw()
+  theme_bw(base_size = 20)
 
 
   # Rent price full depending room number
@@ -800,7 +800,7 @@ ggplot(data_analyzed) + geom_point(aes(x = rooms, y = rent_full)) +
   labs(title ="Rent price (full) depending on number of rooms",
        x = "Number of rooms",
        y = " Rent price (full)") +
-  theme_bw()
+  theme_bw(base_size = 20)
 
   # Average rent price full depending room number
 
@@ -810,7 +810,7 @@ ggplot(avg_rent_per_room_size) + geom_point(aes(x = rooms, y = avg_rent_rooms)) 
   labs(title ="Average rent price (full) by room number",
        x = "Number of rooms",
        y = "Average rent price (full)") +
-  theme_bw()
+  theme_bw(base_size = 20)
 
 
 ## 2.6 Relationship between flat size and building year
@@ -829,7 +829,7 @@ ggplot(size_per_yearbuilt_full, aes(x = year_built, y = area)) +
   labs(title ="Flat size (area) depending on building year",
        x = "Year built",
        y = "Flat size (area)") +
-  theme_bw()
+  theme_bw(base_size = 20)
 
   # Flat size depending on building year (1900 to 2020)
 
@@ -840,12 +840,11 @@ size_per_yearbuilt_period <- data_analyzed %>%
 
 ggplot(size_per_yearbuilt_period, aes(x = year_built, y = area)) +
   geom_point() +
-  geom_smooth(method = "lm", col = "red") +
   geom_hline(yintercept = mean(size_per_yearbuilt_period$area), col = "blue") +
   labs(title ="Flat size (area) depending on building year from 1900 to 2020",
        x = "Year built",
        y = "Flat size (area)") +
-  theme_bw()
+  theme_bw(base_size = 20)
 
 
   # Average flat size per building year from 1900 to 2020
@@ -858,12 +857,17 @@ avg_size_per_yearbuilt <- data_analyzed %>%
   summarize(avg_area_year = mean(area)) %>%
   filter(year_built >= "1900" & year_built <= "2020")
 
+flats_1900_2020 <- data_analyzed %>%
+  select(area, year_built) %>%
+  na.omit() %>%
+  filter(year_built >= "1900" & year_built <= "2020")
+
 ggplot(avg_size_per_yearbuilt) + geom_line(aes(x = year_built, y = avg_area_year)) +
-  geom_hline(yintercept = mean(data_analyzed$area), col = "blue") +
+  geom_hline(yintercept = mean(flats_1900_2020$area), col = "blue") + # Average flat size for flats built between 1900 and 2020
   labs(title ="Average flat size depending on building year",
        x = "Year built",
        y = "Average flat size (area)") +
-  theme_bw()
+  theme_bw(base_size = 20)
 
 
 
