@@ -87,6 +87,21 @@ D %>% filter(!is.na(area)) %>%
 
 # We now move on to improving our cleaned data set, data_analyzed.
 
+##### NEW: PARKING SPOTS
+
+nono_words <- c("parking", "garage", "parken", "parkplatz", "lagerraum", "storage", "local", "abstellplätze")
+
+parking_tok <- D %>% filter(!is.na(descr)) %>%
+  select(c(rowid, descr, area, rent_full)) %>%
+  unnest_tokens(word, descr, token = "words") %>%
+  filter(word %in% nono_words) %>%
+  distinct(rowid, .keep_all = TRUE) %>% 
+  left_join(D %>% select(c(rowid, descr)), by = c("rowid" = "rowid"))
+
+parking_rent <- parking_tok %>% filter(rent_full <= 400)
+
+D_easy = D %>% select(c(rowid, descr, rent_full, area))
+  
 # Working on data_analyzed -----------------------------------------------------
 
 ### Preparatory steps
